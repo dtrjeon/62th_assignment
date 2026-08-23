@@ -1,0 +1,592 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1">
+<title>수주반 62기 조편성</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+KR:wght@600;700&family=Noto+Sans+KR:wght@400;500;600;700&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --paper:#EEF1F6;
+    --panel:#FFFFFF;
+    --ink:#1B2A4A;
+    --ink-soft:#5A6B8C;
+    --line: #DDE3EE;
+    --gold:#C9A15A;
+    --teal:#3C8577;
+    --rose:#B85C6B;
+    --helper:#8B6BB8;
+    --groupA:#2F5C8A;
+    --groupB:#3C8577;
+    --groupC:#B8813E;
+    --groupD:#9C4F63;
+    --radius:12px;
+    --shadow: 0 1px 2px rgba(27,42,74,0.06), 0 6px 20px rgba(27,42,74,0.06);
+  }
+  *{box-sizing:border-box;}
+  html{ -webkit-text-size-adjust:100%; }
+  body{
+    margin:0;
+    background:
+      radial-gradient(1200px 600px at 100% -10%, rgba(47,92,138,0.06), transparent 60%),
+      var(--paper);
+    color:var(--ink);
+    font-family:'Noto Sans KR', sans-serif;
+    padding-bottom:80px;
+    overscroll-behavior-y: contain;
+  }
+  header{
+    padding:24px 16px 14px;
+    max-width:720px;
+    margin:0 auto;
+  }
+  h1{
+    font-family:'Noto Serif KR', serif;
+    font-size:21px;
+    font-weight:700;
+    margin:0 0 4px;
+    letter-spacing:-0.01em;
+  }
+  .sub{
+    font-size:12.5px;
+    color:var(--ink-soft);
+    line-height:1.5;
+  }
+  .toolbar{
+    max-width:720px;
+    margin:0 auto 10px;
+    padding:0 16px;
+    display:flex;
+    gap:8px;
+    align-items:center;
+    flex-wrap:wrap;
+    position:sticky;
+    top:0;
+    z-index:20;
+    padding-top:8px;
+    padding-bottom:8px;
+    background:var(--paper);
+  }
+  .hint{
+    flex:1;
+    min-width:150px;
+    font-size:12px;
+    color:var(--ink-soft);
+    background:var(--panel);
+    border:1px solid var(--line);
+    border-radius:10px;
+    padding:8px 12px;
+  }
+  .hint b{color:var(--ink);}
+  button.reset{
+    font-family:inherit;
+    font-size:12.5px;
+    font-weight:600;
+    color:var(--ink);
+    background:var(--panel);
+    border:1px solid var(--line);
+    border-radius:10px;
+    padding:8px 14px;
+    cursor:pointer;
+    white-space:nowrap;
+  }
+  button.reset:active{ background:var(--line); }
+
+  main{
+    max-width:720px;
+    margin:0 auto;
+    padding:0 12px;
+  }
+
+  .gridwrap{
+    border-radius:var(--radius);
+    overflow:hidden;
+    box-shadow:var(--shadow);
+    background:var(--panel);
+  }
+
+  .gridhead, .gridrow{
+    display:grid;
+    grid-template-columns: 48px 1fr 1fr 1fr;
+    gap:6px;
+  }
+  .gridhead{
+    padding:10px 10px 8px;
+    background:#F6F8FB;
+    border-bottom:1px solid var(--line);
+  }
+  .gridhead div{
+    font-size:10.5px;
+    font-weight:700;
+    color:var(--ink-soft);
+    text-align:center;
+    letter-spacing:0.01em;
+  }
+  .gridhead div:first-child{ text-align:left; padding-left:2px;}
+
+  .gridrow{
+    padding:8px 10px;
+    align-items:stretch;
+    border-bottom:1px solid var(--line);
+  }
+  .gridrow:last-child{ border-bottom:none; }
+
+  .jo-tag{
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    justify-content:center;
+    border-radius:9px;
+    font-family:'JetBrains Mono', monospace;
+    font-weight:700;
+    font-size:12.5px;
+    color:#fff;
+  }
+  .jo-tag .g{
+    font-size:9px;
+    font-weight:600;
+    opacity:0.85;
+    font-family:'Noto Sans KR', sans-serif;
+    margin-top:1px;
+  }
+  .jo-tag.gA{ background:var(--groupA); }
+  .jo-tag.gB{ background:var(--groupB); }
+  .jo-tag.gC{ background:var(--groupC); }
+  .jo-tag.gD{ background:var(--groupD); }
+
+  .card{
+    border-radius:10px;
+    padding:8px 8px;
+    border:1.5px solid transparent;
+    cursor:grab;
+    user-select:none;
+    -webkit-tap-highlight-color: transparent;
+    touch-action: pan-y;
+    transition: box-shadow .12s ease, transform .15s ease;
+    position:relative;
+    display:flex;
+    flex-direction:column;
+    justify-content:center;
+    min-height:44px;
+  }
+  .role{
+    font-size:9.5px;
+    font-weight:600;
+    letter-spacing:0.01em;
+    margin-bottom:2px;
+    opacity:0.75;
+  }
+  .code{
+    font-family:'JetBrains Mono', monospace;
+    font-size:10px;
+    font-weight:700;
+    opacity:0.7;
+    margin-right:3px;
+  }
+  .nm{
+    font-size:13px;
+    font-weight:600;
+    line-height:1.25;
+  }
+  .card.leader{ background:#FBF3E3; border-color:#EBD9AF; }
+  .card.leader .role{ color:var(--gold); }
+  .card.trainer{ background:#E9F4F1; border-color:#BFDFD8; }
+  .card.trainer .role{ color:var(--teal); }
+  .card.trainee{ background:#F8ECEE; border-color:#E7C7CC; }
+  .card.trainee .role{ color:var(--rose); }
+  .card.helper-code{ background:#F1EBF7; border-color:#D9C8EA; }
+  .card.helper-code .role{ color:var(--helper); }
+
+  .card.pending{
+    transform: scale(1.04);
+    box-shadow: 0 4px 14px rgba(27,42,74,0.18);
+  }
+  .card.dragging{
+    opacity:0.25;
+  }
+  .card.drop-target{
+    box-shadow: 0 0 0 3px var(--ink) inset;
+    background:#fff;
+  }
+  .card.just-dropped{
+    animation: pop .32s ease;
+  }
+  @keyframes pop{
+    0%{ transform:scale(1.08); }
+    100%{ transform:scale(1); }
+  }
+  .ghost-card{
+    position:fixed;
+    z-index:999;
+    pointer-events:none;
+    border-radius:10px;
+    padding:8px 8px;
+    box-shadow: 0 12px 28px rgba(27,42,74,0.35);
+    transform: translate(-50%, -50%) scale(1.08) rotate(-2deg);
+    width:96px;
+    opacity:0.98;
+  }
+
+  footer{
+    max-width:720px;
+    margin:18px auto 0;
+    padding:0 20px;
+    font-size:11.5px;
+    color:var(--ink-soft);
+    line-height:1.6;
+  }
+  .legend{
+    display:flex;
+    gap:14px;
+    flex-wrap:wrap;
+    margin-top:6px;
+  }
+  .legend span{
+    display:inline-flex;
+    align-items:center;
+    gap:5px;
+  }
+  .dot{
+    width:9px;height:9px;border-radius:50%;
+    display:inline-block;
+  }
+  .dot.g{background:var(--gold);}
+  .dot.t{background:var(--teal);}
+  .dot.s{background:var(--rose);}
+
+  .toast{
+    position:fixed;
+    left:50%; bottom:24px;
+    transform:translateX(-50%) translateY(20px);
+    background:var(--ink);
+    color:#fff;
+    font-size:13px;
+    padding:10px 18px;
+    border-radius:999px;
+    opacity:0;
+    pointer-events:none;
+    transition: opacity .2s ease, transform .2s ease;
+    box-shadow:0 8px 24px rgba(27,42,74,0.3);
+    white-space:nowrap;
+  }
+  .toast.show{ opacity:1; transform:translateX(-50%) translateY(0); }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>수주반 62기 조편성</h1>
+  <div class="sub">카드를 <b>0.3초쯤 눌러 살짝 커지면</b> 잡힌 것입니다. 그대로 끌어 다른 카드 위에 놓으면 자리가 바뀝니다. 살짝 누르지 않고 바로 위아래로 밀면 화면 스크롤만 됩니다.</div>
+</header>
+
+<div class="toolbar">
+  <div class="hint" id="hintbar">카드를 눌러서 끌어보세요.</div>
+  <button class="reset" id="resetBtn">처음 배치로 되돌리기</button>
+</div>
+
+<main id="main">
+  <div class="gridwrap">
+    <div class="gridhead">
+      <div>조</div>
+      <div>조장</div>
+      <div>훈련자</div>
+      <div>훈련생</div>
+    </div>
+    <div id="rows"></div>
+  </div>
+</main>
+
+<footer>
+  <div><b>단계 표기</b>: 이름 앞 숫자(1~5)는 단계, H는 헬퍼입니다.</div>
+  <div class="legend">
+    <span><i class="dot g"></i>훈련자(조장)</span>
+    <span><i class="dot t"></i>훈련자</span>
+    <span><i class="dot s"></i>훈련생</span>
+  </div>
+</footer>
+
+<div class="toast" id="toast"></div>
+
+<script>
+// ---- 데이터: 조 / 그룹 / 역할 (10행 고정) ----
+const initialData = [
+  { no:1,  group:"A", leader:{code:"501", lvl:"5", name:"성기현B"}, trainer:{code:"301", lvl:"3", name:"김용대D"}, trainee:{code:"101", lvl:"1", name:"김재진F"} },
+  { no:2,  group:"A", leader:{code:"502", lvl:"5", name:"신명순C"}, trainer:{code:"207", lvl:"2", name:"정현주R"}, trainee:{code:"102", lvl:"1", name:"최창숙B"} },
+  { no:3,  group:"A", leader:{code:"503", lvl:"5", name:"이미경BA"}, trainer:{code:"303", lvl:"3", name:"박길순A"}, trainee:{code:"203", lvl:"2", name:"김진우AC"} },
+  { no:4,  group:"B", leader:{code:"401", lvl:"4", name:"김성현F"}, trainer:{code:"308", lvl:"3", name:"이나경J"}, trainee:{code:"210", lvl:"2", name:"최정화"} },
+  { no:5,  group:"B", leader:{code:"402", lvl:"4", name:"김영옥D"}, trainer:{code:"305", lvl:"3", name:"배현주G"}, trainee:{code:"202", lvl:"2", name:"김정옥AA"} },
+  { no:6,  group:"C", leader:{code:"403", lvl:"4", name:"이지영CA"}, trainer:{code:"306", lvl:"3", name:"신대용A"}, trainee:{code:"205", lvl:"2", name:"이지연BN"} },
+  { no:7,  group:"C", leader:{code:"404", lvl:"4", name:"임원기B"}, trainer:{code:"307", lvl:"3", name:"안희정D"}, trainee:{code:"204", lvl:"2", name:"송유미B"} },
+  { no:8,  group:"C", leader:{code:"405", lvl:"4", name:"임주현A"}, trainer:{code:"304", lvl:"3", name:"박희철A"}, trainee:{code:"206", lvl:"2", name:"신유경B"} },
+  { no:9,  group:"D", leader:{code:"H01", lvl:"H", name:"H01"}, trainer:{code:"309", lvl:"3", name:"이선영AP"}, trainee:{code:"201", lvl:"2", name:"강동우C"} },
+  { no:10, group:"D", leader:{code:"H02", lvl:"H", name:"H02"}, trainer:{code:"302", lvl:"3", name:"김희정AO"}, trainee:{code:"103", lvl:"1", name:"103"} },
+];
+
+let data = JSON.parse(JSON.stringify(initialData));
+
+// ---- 구글시트 연동 ----
+// 배포한 Apps Script 웹 앱 URL을 여기에 붙여넣으세요.
+const SHEET_WEBHOOK_URL = "여기에_배포된_웹앱_URL을_붙여넣으세요";
+
+function dataToRows(d){
+  const roles = [['leader','조장'], ['trainer','훈련자'], ['trainee','훈련생']];
+  const rows = [];
+  d.forEach(j=>{
+    roles.forEach(([key])=>{
+      const p = j[key];
+      rows.push({ jo: j.no, group: j.group, role: key, code: p.code, lvl: p.lvl, name: p.name });
+    });
+  });
+  return rows;
+}
+
+function rowsToData(rows){
+  const map = {};
+  rows.forEach(r=>{
+    const jo = Number(r.jo);
+    if(!map[jo]) map[jo] = { no: jo, group: r.group };
+    map[jo][r.role] = { code: r.code, lvl: String(r.lvl), name: r.name };
+  });
+  return Object.values(map).sort((a,b)=> a.no - b.no);
+}
+
+async function loadFromSheet(){
+  if(!SHEET_WEBHOOK_URL || SHEET_WEBHOOK_URL.includes('여기에')) return;
+  try{
+    hintbar.textContent = '구글시트에서 불러오는 중...';
+    const res = await fetch(SHEET_WEBHOOK_URL);
+    const json = await res.json();
+    if(json.ok && json.rows && json.rows.length === 30){
+      data = rowsToData(json.rows);
+      render();
+      showToast('구글시트에서 불러왔습니다');
+    }
+    hintbar.textContent = '카드를 눌러서 끌어보세요.';
+  }catch(err){
+    hintbar.textContent = '카드를 눌러서 끌어보세요.';
+    showToast('시트 불러오기 실패 (기본값 사용)');
+  }
+}
+
+async function saveToSheet(){
+  if(!SHEET_WEBHOOK_URL || SHEET_WEBHOOK_URL.includes('여기에')) return;
+  try{
+    await fetch(SHEET_WEBHOOK_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'text/plain' }, // preflight(OPTIONS) 회피용
+      body: JSON.stringify({ rows: dataToRows(data) }),
+    });
+  }catch(err){
+    showToast('시트 저장 실패 (네트워크 확인 필요)');
+  }
+}
+
+const rowsEl = document.getElementById('rows');
+const toast = document.getElementById('toast');
+const hintbar = document.getElementById('hintbar');
+
+// ---- 롱프레스 + 드래그 상태 ----
+const LONGPRESS_MS = 300;
+const MOVE_CANCEL_PX = 9;
+
+let pending = null;
+let drag = null;
+let currentDropEl = null;
+
+function showToast(msg){
+  toast.textContent = msg;
+  toast.classList.add('show');
+  clearTimeout(showToast._t);
+  showToast._t = setTimeout(()=> toast.classList.remove('show'), 1800);
+}
+
+function findRow(joNo){ return data.find(j => j.no === joNo); }
+function findSlot(joNo, role){ return findRow(joNo)[role]; }
+function setSlot(joNo, role, person){ findRow(joNo)[role] = person; }
+
+function render(highlightJo, highlightRole){
+  rowsEl.innerHTML = '';
+  data.forEach(j=>{
+    const row = document.createElement('div');
+    row.className = 'gridrow';
+
+    const tag = document.createElement('div');
+    tag.className = `jo-tag g${j.group}`;
+    tag.innerHTML = `${j.no}조<span class="g">${j.group}그룹</span>`;
+    row.appendChild(tag);
+
+    row.appendChild(makeCard(j.no, 'leader', j.leader, '조장', 'leader'));
+    row.appendChild(makeCard(j.no, 'trainer', j.trainer, '훈련자', 'trainer'));
+    row.appendChild(makeCard(j.no, 'trainee', j.trainee, '훈련생', 'trainee'));
+
+    rowsEl.appendChild(row);
+  });
+
+  if(highlightJo !== undefined){
+    const sel = rowsEl.querySelector(`.card[data-jo="${highlightJo}"][data-role="${highlightRole}"]`);
+    if(sel) sel.classList.add('just-dropped');
+  }
+}
+
+function makeCard(joNo, roleKey, person, roleLabel, roleClass){
+  const el = document.createElement('div');
+  const isHelper = person.lvl === 'H';
+  el.className = `card ${roleClass}${isHelper ? ' helper-code' : ''}`;
+  el.dataset.jo = joNo;
+  el.dataset.role = roleKey;
+
+  const codeText = isHelper ? person.code : `${person.lvl})`;
+  el.innerHTML = `
+    <div class="role">${roleLabel}</div>
+    <div class="nm"><span class="code">${codeText}</span>${person.name}</div>
+  `;
+
+  el.addEventListener('pointerdown', (e)=> onPointerDown(e, joNo, roleKey, el));
+  return el;
+}
+
+function onPointerDown(e, joNo, roleKey, el){
+  if(drag) return;
+
+  const x = e.clientX, y = e.clientY;
+
+  pending = { jo: joNo, role: roleKey, el, x, y };
+
+  window.addEventListener('pointermove', onPendingMove);
+  window.addEventListener('pointerup', onPendingUp);
+  window.addEventListener('pointercancel', onPendingCancel);
+
+  pending.timer = setTimeout(()=>{
+    if(!pending) return;
+    el.classList.add('pending');
+    if(navigator.vibrate) navigator.vibrate(12);
+  }, 130);
+
+  pending.activate = setTimeout(()=>{
+    if(!pending) return;
+    beginDrag(pending.jo, pending.role, pending.el, pending.x, pending.y);
+    pending = null;
+  }, LONGPRESS_MS);
+}
+
+function onPendingMove(e){
+  if(!pending) return;
+  const dx = e.clientX - pending.x;
+  const dy = e.clientY - pending.y;
+  if(Math.sqrt(dx*dx + dy*dy) > MOVE_CANCEL_PX){
+    cancelPending();
+  }
+}
+
+function onPendingUp(){ cancelPending(); }
+function onPendingCancel(){ cancelPending(); }
+
+function cancelPending(){
+  if(!pending) return;
+  clearTimeout(pending.timer);
+  clearTimeout(pending.activate);
+  pending.el.classList.remove('pending');
+  window.removeEventListener('pointermove', onPendingMove);
+  window.removeEventListener('pointerup', onPendingUp);
+  window.removeEventListener('pointercancel', onPendingCancel);
+  pending = null;
+}
+
+function beginDrag(joNo, roleKey, el, x, y){
+  window.removeEventListener('pointermove', onPendingMove);
+  window.removeEventListener('pointerup', onPendingUp);
+  window.removeEventListener('pointercancel', onPendingCancel);
+
+  el.classList.remove('pending');
+
+  const rect = el.getBoundingClientRect();
+  const ghost = el.cloneNode(true);
+  ghost.classList.add('ghost-card');
+  ghost.style.left = (rect.left + rect.width/2) + 'px';
+  ghost.style.top = (rect.top + rect.height/2) + 'px';
+  document.body.appendChild(ghost);
+
+  el.classList.add('dragging');
+
+  drag = { jo: joNo, role: roleKey, el, ghost };
+
+  hintbar.textContent = '카드를 놓을 위치 위로 이동하세요.';
+
+  window.addEventListener('pointermove', onDragMove);
+  window.addEventListener('pointerup', onDragEnd);
+  window.addEventListener('pointercancel', onDragEnd);
+}
+
+function onDragMove(e){
+  if(!drag) return;
+  e.preventDefault();
+  drag.ghost.style.left = e.clientX + 'px';
+  drag.ghost.style.top = e.clientY + 'px';
+
+  drag.ghost.style.display = 'none';
+  const under = document.elementFromPoint(e.clientX, e.clientY);
+  drag.ghost.style.display = '';
+
+  const targetCard = under ? under.closest('.card') : null;
+
+  if(currentDropEl && currentDropEl !== targetCard){
+    currentDropEl.classList.remove('drop-target');
+    currentDropEl = null;
+  }
+  if(targetCard && targetCard !== drag.el){
+    targetCard.classList.add('drop-target');
+    currentDropEl = targetCard;
+  }
+}
+
+function onDragEnd(){
+  window.removeEventListener('pointermove', onDragMove);
+  window.removeEventListener('pointerup', onDragEnd);
+  window.removeEventListener('pointercancel', onDragEnd);
+
+  if(!drag) return;
+
+  drag.ghost.remove();
+  drag.el.classList.remove('dragging');
+
+  let dropJo = null, dropRole = null;
+  if(currentDropEl){
+    currentDropEl.classList.remove('drop-target');
+    dropJo = Number(currentDropEl.dataset.jo);
+    dropRole = currentDropEl.dataset.role;
+  }
+  currentDropEl = null;
+
+  const sourceJo = drag.jo, sourceRole = drag.role;
+  drag = null;
+
+  if(dropJo === null || (dropJo === sourceJo && dropRole === sourceRole)){
+    hintbar.textContent = '카드를 눌러서 끌어보세요.';
+    return;
+  }
+
+  const a = findSlot(sourceJo, sourceRole);
+  const b = findSlot(dropJo, dropRole);
+  setSlot(sourceJo, sourceRole, b);
+  setSlot(dropJo, dropRole, a);
+
+  showToast(`${a.name} ↔ ${b.name} 자리 교체 완료`);
+  render(dropJo, dropRole);
+  hintbar.textContent = '카드를 눌러서 끌어보세요.';
+  saveToSheet();
+}
+
+document.getElementById('resetBtn').addEventListener('click', ()=>{
+  data = JSON.parse(JSON.stringify(initialData));
+  hintbar.textContent = '카드를 눌러서 끌어보세요.';
+  render();
+  showToast('처음 배치로 되돌렸습니다');
+  saveToSheet();
+});
+
+render();
+loadFromSheet();
+</script>
+</body>
+</html>
