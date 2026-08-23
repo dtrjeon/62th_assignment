@@ -234,6 +234,15 @@
     font-weight:700;
     font-size:12.5px;
     color:#fff;
+    cursor:pointer;
+    -webkit-tap-highlight-color: transparent;
+    user-select:none;
+    transition: transform .12s ease, box-shadow .12s ease;
+  }
+  .jo-tag:active{ transform: scale(0.94); }
+  .jo-tag.jo-selected{
+    box-shadow: 0 0 0 3px #fff, 0 0 0 6px var(--accent, #2563eb);
+    transform: scale(1.05);
   }
   .jo-tag .g{
     font-size:9px;
@@ -430,7 +439,7 @@
 </header>
 
 <div class="toolbar">
-  <div class="hint" id="hintbar">카드를 눌러서 끌어보세요.</div>
+  <div class="hint" id="hintbar">카드를 눌러서 끌어보세요. (조번호를 누르면 조 전체 이동)</div>
   <button class="reset" id="saveBtn">저장하기</button>
   <button class="reset" id="dupBtn">중복체크</button>
   <button class="icon-btn" id="xlsxBtn" title="엑셀로 저장" aria-label="엑셀로 저장">
@@ -726,6 +735,61 @@ let pending = null;
 let drag = null;
 let currentDropEl = null;
 let unsavedKeys = new Set(); // "jo-role" 형태, 아직 시트에 저장되지 않은 칸
+let selectedJoForGroupMove = null; // 조번호 탭으로 조 전체 이동할 때 첫 번째로 선택한 조
+
+function onJoTagClick(joNo, tagEl){
+  if(selectedJoForGroupMove === null){
+    selectedJoForGroupMove = joNo;
+    render();
+    hintbar.textContent = `${joNo}조를 이동할 위치의 조번호를 눌러주세요. (같은 조번호를 다시 누르면 취소)`;
+    return;
+  }
+  if(selectedJoForGroupMove === joNo){
+    selectedJoForGroupMove = null;
+    render();
+    hintbar.textContent = '카드를 눌러서 끌어보세요.';
+    return;
+  }
+  const sourceJo = selectedJoForGroupMove;
+  const targetJo = joNo;
+  selectedJoForGroupMove = null;
+  swapWholeGroups(sourceJo, targetJo);
+}
+
+function swapWholeGroups(sourceJo, targetJo){
+  const rowA = findRow(sourceJo);
+  const rowB = findRow(targetJo);
+  const roles = ['leader','trainer','trainee'];
+
+  const namesA = roles.map(r=> rowA[r].name).join('/');
+  const namesB = roles.map(r=> rowB[r].name).join('/');
+
+  roles.forEach(r=>{
+    const tmp = rowA[r];
+    rowA[r] = rowB[r];
+    rowB[r] = tmp;
+    unsavedKeys.add(`${sourceJo}-${r}`);
+    unsavedKeys.add(`${targetJo}-${r}`);
+  });
+
+  showToast(`${sourceJo}조 ↔ ${targetJo}조 전체 이동 완료`);
+  render();
+  hintbar.textContent = '카드를 눌러서 끌어보세요.';
+  document.getElementById('dupPanel').style.display = 'none';
+
+  const historyText = `${sourceJo}조(${namesA}) ↔ ${targetJo}조(${namesB}) 조 전체 이동`;
+  addHistoryLocal(historyText);
+
+  saveToSheet(historyText).then(ok=>{
+    if(ok){
+      roles.forEach(r=>{
+        unsavedKeys.delete(`${sourceJo}-${r}`);
+        unsavedKeys.delete(`${targetJo}-${r}`);
+      });
+      render();
+    }
+  });
+}
 
 // ---- 변경이력 ----
 const historyPanel = document.getElementById('historyPanel');
@@ -775,8 +839,9 @@ function render(highlightJo, highlightRole){
     row.className = 'gridrow';
 
     const tag = document.createElement('div');
-    tag.className = `jo-tag g${j.group}`;
+    tag.className = `jo-tag g${j.group}${selectedJoForGroupMove === j.no ? ' jo-selected' : ''}`;
     tag.innerHTML = `${j.no}조<span class="g">${j.group}그룹</span>`;
+    tag.addEventListener('click', ()=> onJoTagClick(j.no, tag));
     row.appendChild(tag);
 
     row.appendChild(makeCard(j.no, 'leader', j.leader, '조장', 'leader'));
@@ -958,6 +1023,7 @@ function onDragEnd(){
 document.getElementById('resetBtn').addEventListener('click', ()=>{
   data = JSON.parse(JSON.stringify(initialData));
   unsavedKeys.clear();
+  selectedJoForGroupMove = null;
   data.forEach(j=> ['leader','trainer','trainee'].forEach(r=> unsavedKeys.add(`${j.no}-${r}`)));
   hintbar.textContent = '카드를 눌러서 끌어보세요.';
   render();
