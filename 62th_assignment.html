@@ -347,6 +347,63 @@
   .dot.t{background:var(--teal);}
   .dot.s{background:var(--rose);}
 
+  .history-panel{
+    max-width:720px;
+    margin:0 auto 10px;
+    border-radius:var(--radius);
+    box-shadow:var(--shadow);
+    background:var(--panel);
+    overflow:hidden;
+  }
+  .history-head{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    padding:10px 14px;
+    cursor:pointer;
+    user-select:none;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .history-head .title{
+    font-size:12.5px;
+    font-weight:700;
+    color:var(--ink);
+  }
+  .history-head .chev{
+    font-size:11px;
+    color:var(--ink-soft);
+    transition: transform .15s ease;
+  }
+  .history-panel.open .chev{ transform: rotate(180deg); }
+  .history-list{
+    display:none;
+    max-height:260px;
+    overflow-y:auto;
+    border-top:1px solid var(--line);
+  }
+  .history-panel.open .history-list{ display:block; }
+  .history-item{
+    padding:8px 14px;
+    font-size:12px;
+    line-height:1.5;
+    border-bottom:1px solid var(--line);
+    color:var(--ink);
+  }
+  .history-item:last-child{ border-bottom:none; }
+  .history-item .t{
+    display:block;
+    font-family:'JetBrains Mono', monospace;
+    font-size:10.5px;
+    color:var(--ink-soft);
+    margin-bottom:1px;
+  }
+  .history-empty{
+    padding:14px;
+    font-size:12px;
+    color:var(--ink-soft);
+    text-align:center;
+  }
+
   .toast{
     position:fixed;
     left:50%; bottom:24px;
@@ -389,6 +446,16 @@
 </div>
 
 <div id="dupPanel" class="dup-panel" style="display:none;"></div>
+
+<div class="history-panel" id="historyPanel">
+  <div class="history-head" id="historyHead">
+    <span class="title">📝 변경이력</span>
+    <span class="chev">▾</span>
+  </div>
+  <div class="history-list" id="historyList">
+    <div class="history-empty">아직 변경 기록이 없습니다.</div>
+  </div>
+</div>
 
 <div class="tabbar" id="tabbar">
   <button class="tab active" data-tab="62">62기</button>
@@ -445,6 +512,8 @@ const initialData = [
 ];
 
 let data = JSON.parse(JSON.stringify(initialData));
+
+const ROLE_LABEL = { leader:'조장', trainer:'훈련자', trainee:'훈련생' };
 
 // ---- 과거 기수 조편성 데이터 (중복체크용, 이름만) ----
 const pastCohorts = {
@@ -613,6 +682,10 @@ async function loadFromSheet(){
       render();
       showToast('구글시트에서 불러왔습니다');
     }
+    if(json.ok && Array.isArray(json.history)){
+      historyLog = json.history;
+      renderHistory();
+    }
     hintbar.textContent = '카드를 눌러서 끌어보세요.';
   }catch(err){
     hintbar.textContent = '카드를 눌러서 끌어보세요.';
@@ -620,14 +693,20 @@ async function loadFromSheet(){
   }
 }
 
-async function saveToSheet(){
+// historyText를 함께 보내면 변경이력 시트에도 한 줄 자동 기록된다.
+async function saveToSheet(historyText){
   if(!SHEET_WEBHOOK_URL || SHEET_WEBHOOK_URL.includes('여기에')) return false;
   try{
-    await fetch(SHEET_WEBHOOK_URL, {
+    const res = await fetch(SHEET_WEBHOOK_URL, {
       method: 'POST',
       headers: { 'Content-Type': 'text/plain' }, // preflight(OPTIONS) 회피용
-      body: JSON.stringify({ rows: dataToRows(data) }),
+      body: JSON.stringify({ rows: dataToRows(data), historyText: historyText || undefined }),
     });
+    const json = await res.json().catch(()=>null);
+    if(json && json.ok && Array.isArray(json.history)){
+      historyLog = json.history; // 서버 기록으로 동기화(시간 포함)
+      renderHistory();
+    }
     return true;
   }catch(err){
     showToast('시트 저장 실패 (네트워크 확인 필요)');
@@ -647,6 +726,36 @@ let pending = null;
 let drag = null;
 let currentDropEl = null;
 let unsavedKeys = new Set(); // "jo-role" 형태, 아직 시트에 저장되지 않은 칸
+
+// ---- 변경이력 ----
+const historyPanel = document.getElementById('historyPanel');
+const historyHead = document.getElementById('historyHead');
+const historyListEl = document.getElementById('historyList');
+let historyLog = []; // [{time, text}, ...] 최신순
+const HISTORY_LIMIT = 50;
+
+function renderHistory(){
+  if(historyLog.length === 0){
+    historyListEl.innerHTML = '<div class="history-empty">아직 변경 기록이 없습니다.</div>';
+    return;
+  }
+  historyListEl.innerHTML = historyLog.map(h=>
+    `<div class="history-item"><span class="t">${h.time}</span>${h.text}</div>`
+  ).join('');
+}
+
+function addHistoryLocal(text){
+  const now = new Date();
+  const pad = n => String(n).padStart(2,'0');
+  const time = `${pad(now.getMonth()+1)}/${pad(now.getDate())} ${pad(now.getHours())}:${pad(now.getMinutes())}`;
+  historyLog.unshift({ time, text });
+  if(historyLog.length > HISTORY_LIMIT) historyLog.length = HISTORY_LIMIT;
+  renderHistory();
+}
+
+historyHead.addEventListener('click', ()=>{
+  historyPanel.classList.toggle('open');
+});
 
 function showToast(msg){
   toast.textContent = msg;
@@ -834,7 +943,10 @@ function onDragEnd(){
   hintbar.textContent = '카드를 눌러서 끌어보세요.';
   document.getElementById('dupPanel').style.display = 'none';
 
-  saveToSheet().then(ok=>{
+  const historyText = `${sourceJo}조 ${ROLE_LABEL[sourceRole]}(${a.name}) ↔ ${dropJo}조 ${ROLE_LABEL[dropRole]}(${b.name})`;
+  addHistoryLocal(historyText);
+
+  saveToSheet(historyText).then(ok=>{
     if(ok){
       unsavedKeys.delete(`${sourceJo}-${sourceRole}`);
       unsavedKeys.delete(`${dropJo}-${dropRole}`);
@@ -851,7 +963,8 @@ document.getElementById('resetBtn').addEventListener('click', ()=>{
   render();
   document.getElementById('dupPanel').style.display = 'none';
   showToast('처음 배치로 되돌렸습니다');
-  saveToSheet().then(ok=>{
+  addHistoryLocal('전체 조편성을 처음 배치로 되돌림');
+  saveToSheet('전체 조편성을 처음 배치로 되돌림').then(ok=>{
     if(ok){ unsavedKeys.clear(); render(); }
   });
 });
