@@ -93,10 +93,79 @@
   }
   button.reset:active{ background:var(--line); }
 
+  .dup-panel{
+    max-width:720px;
+    margin:0 auto 10px;
+    padding:12px 14px;
+    border-radius:10px;
+    font-size:12.5px;
+    line-height:1.7;
+  }
+  .dup-panel.ok{
+    background:#EAF6EE;
+    border:1px solid #BFE3CB;
+    color:#2B6B42;
+  }
+  .dup-panel.bad{
+    background:#FBEAEC;
+    border:1px solid #F0C4CA;
+    color:#8A2A34;
+  }
+  .dup-panel b{ font-weight:700; }
+  .dup-panel ul{ margin:6px 0 0; padding-left:18px; }
+
+  .card.dup{
+    box-shadow: 0 0 0 2.5px #C43C4A inset;
+    animation: dupPulse 1.1s ease-in-out infinite;
+  }
+  @keyframes dupPulse{
+    0%,100%{ box-shadow: 0 0 0 2.5px #C43C4A inset; }
+    50%{ box-shadow: 0 0 0 2.5px #F0A1A9 inset; }
+  }
+
   main{
     max-width:720px;
     margin:0 auto;
     padding:0 12px;
+  }
+
+  .tabbar{
+    max-width:720px;
+    margin:0 auto 10px;
+    padding:0 12px;
+    display:flex;
+    gap:6px;
+  }  .tab{
+    flex:1;
+    font-family:inherit;
+    font-size:12.5px;
+    font-weight:600;
+    color:var(--ink-soft);
+    background:var(--panel);
+    border:1px solid var(--line);
+    border-radius:10px;
+    padding:8px 6px;
+    cursor:pointer;
+  }
+  .tab.active{
+    color:#fff;
+    background:var(--ink);
+    border-color:var(--ink);
+  }
+
+  .pastwrap{
+    border-radius:var(--radius);
+    overflow:hidden;
+    box-shadow:var(--shadow);
+    background:var(--panel);
+    padding:8px;
+    text-align:center;
+  }
+  .pastwrap img{
+    width:100%;
+    height:auto;
+    border-radius:8px;
+    display:block;
   }
 
   .gridwrap{
@@ -282,11 +351,22 @@
 
 <div class="toolbar">
   <div class="hint" id="hintbar">카드를 눌러서 끌어보세요.</div>
+  <button class="reset" id="saveBtn">저장하기</button>
+  <button class="reset" id="dupBtn">중복체크</button>
   <button class="reset" id="resetBtn">처음 배치로 되돌리기</button>
 </div>
 
+<div id="dupPanel" class="dup-panel" style="display:none;"></div>
+
+<div class="tabbar" id="tabbar">
+  <button class="tab active" data-tab="62">62기</button>
+  <button class="tab" data-tab="61">61기</button>
+  <button class="tab" data-tab="60">60기</button>
+  <button class="tab" data-tab="59">59기</button>
+</div>
+
 <main id="main">
-  <div class="gridwrap">
+  <div class="gridwrap" id="tab-62">
     <div class="gridhead">
       <div>조</div>
       <div>조장</div>
@@ -294,6 +374,15 @@
       <div>훈련생</div>
     </div>
     <div id="rows"></div>
+  </div>
+  <div class="pastwrap" id="tab-61" style="display:none;">
+    <img src="img/61th.png" alt="61기 조편성" loading="lazy">
+  </div>
+  <div class="pastwrap" id="tab-60" style="display:none;">
+    <img src="img/60th.jpg" alt="60기 조편성" loading="lazy">
+  </div>
+  <div class="pastwrap" id="tab-59" style="display:none;">
+    <img src="img/59th.jpg" alt="59기 조편성" loading="lazy">
   </div>
 </main>
 
@@ -317,13 +406,142 @@ const initialData = [
   { no:4,  group:"B", leader:{code:"401", lvl:"4", name:"김성현F"}, trainer:{code:"308", lvl:"3", name:"이나경J"}, trainee:{code:"210", lvl:"2", name:"최정화"} },
   { no:5,  group:"B", leader:{code:"402", lvl:"4", name:"김영옥D"}, trainer:{code:"305", lvl:"3", name:"배현주G"}, trainee:{code:"202", lvl:"2", name:"김정옥AA"} },
   { no:6,  group:"C", leader:{code:"403", lvl:"4", name:"이지영CA"}, trainer:{code:"306", lvl:"3", name:"신대용A"}, trainee:{code:"205", lvl:"2", name:"이지연BN"} },
-  { no:7,  group:"C", leader:{code:"404", lvl:"4", name:"임원기B"}, trainer:{code:"307", lvl:"3", name:"안희정D"}, trainee:{code:"204", lvl:"2", name:"송유미B"} },
+  { no:7,  group:"C", leader:{code:"404", lvl:"4", name:"임원기B"}, trainer:{code:"302", lvl:"3", name:"김희정AO"}, trainee:{code:"204", lvl:"2", name:"송유미B"} },
   { no:8,  group:"C", leader:{code:"405", lvl:"4", name:"임주현A"}, trainer:{code:"304", lvl:"3", name:"박희철A"}, trainee:{code:"206", lvl:"2", name:"신유경B"} },
   { no:9,  group:"D", leader:{code:"H01", lvl:"H", name:"H01"}, trainer:{code:"309", lvl:"3", name:"이선영AP"}, trainee:{code:"201", lvl:"2", name:"강동우C"} },
-  { no:10, group:"D", leader:{code:"H02", lvl:"H", name:"H02"}, trainer:{code:"302", lvl:"3", name:"김희정AO"}, trainee:{code:"103", lvl:"1", name:"103"} },
+  { no:10, group:"D", leader:{code:"H02", lvl:"H", name:"H02"}, trainer:{code:"307", lvl:"3", name:"안희정D"}, trainee:{code:"103", lvl:"1", name:"103"} },
 ];
 
 let data = JSON.parse(JSON.stringify(initialData));
+
+// ---- 과거 기수 조편성 데이터 (중복체크용, 이름만) ----
+const pastCohorts = {
+  "59기": [
+    ["차복심","박윤미","김성현"],
+    ["이은희","정경인","임주현"],
+    ["최현미","허옥영","김루아"],
+    ["김혁주","박선영","박성준"],
+    ["정직희","이미경","허순미"],
+    ["이미숙","이지영","김윤희"],
+    ["계인선","신명순","윤성원"],
+    ["장윤수","성기현","임원기"],
+    ["백남","한영이"],
+    ["최정화","안현주","허순정"],
+  ],
+  "60기": [
+    ["차복심","윤성원","김용대"],
+    ["신명순","임주현","이나경"],
+    ["계인선","이시나","오현애"],
+    ["이미경","임원기","박준영"],
+    ["박선영","김윤희","안희정"],
+    ["장윤수","이지영","김희정"],
+    ["성기현","이은희","이선영"],
+    ["안현주","김성현","박희철"],
+    ["최현미","한영이","배현주"],
+    ["정직희","전인숙","박길순"],
+  ],
+  "61기": [
+    ["김혁주","이지영","송유미"],
+    ["신명순","김용대","신유경"],
+    ["이미경","배현주","강동우"],
+    ["임원기","이나경","이지연"],
+    ["윤성원","이선영","강영미"],
+    ["성기현","안희정","조은진"],
+    ["안현주","박희철","이희자"],
+    ["김성현","김희정","정현주"],
+    ["박선영","임주현","김진우"],
+    ["김윤희","신대용","최정화"],
+  ],
+};
+
+function normalizeName(name){
+  // 코드 표기용으로 이름 뒤에 붙은 영문 접미(예: 김성현F) 제거, 헬퍼/빈자리 제외
+  if(!name) return null;
+  if(/^H\d*$/.test(name)) return null;      // H01, H02 등 헬퍼
+  if(/^\d+$/.test(name)) return null;       // 103 등 미확정 코드
+  return name.replace(/[A-Za-z]+$/,'').trim();
+}
+
+function combos2(arr){
+  const out = [];
+  for(let i=0;i<arr.length;i++){
+    for(let j=i+1;j<arr.length;j++){
+      out.push([arr[i], arr[j]]);
+    }
+  }
+  return out;
+}
+
+function pairKey(a,b){
+  return [a,b].sort().join('|');
+}
+
+function buildPastPairIndex(){
+  const idx = {}; // pairKey -> [{cohort, joIndex}]
+  Object.entries(pastCohorts).forEach(([cohort, groups])=>{
+    groups.forEach((members, i)=>{
+      combos2(members).forEach(([a,b])=>{
+        const k = pairKey(a,b);
+        if(!idx[k]) idx[k] = [];
+        idx[k].push({ cohort, jo: i+1 });
+      });
+    });
+  });
+  return idx;
+}
+
+const pastPairIndex = buildPastPairIndex();
+
+function runDuplicateCheck(){
+  document.querySelectorAll('.card.dup').forEach(c=> c.classList.remove('dup'));
+
+  const conflicts = [];
+
+  data.forEach(j=>{
+    const members = [
+      { role:'leader', raw: j.leader.name },
+      { role:'trainer', raw: j.trainer.name },
+      { role:'trainee', raw: j.trainee.name },
+    ].map(m=> ({ role: m.role, name: normalizeName(m.raw) }))
+     .filter(m=> m.name);
+
+    combos2(members).forEach(([m1, m2])=>{
+      const k = pairKey(m1.name, m2.name);
+      const hit = pastPairIndex[k];
+      if(hit){
+        conflicts.push({
+          jo: j.no,
+          a: { role: m1.role, name: m1.name },
+          b: { role: m2.role, name: m2.name },
+          past: hit,
+        });
+      }
+    });
+  });
+
+  const panel = document.getElementById('dupPanel');
+  panel.style.display = '';
+
+  if(conflicts.length === 0){
+    panel.className = 'dup-panel ok';
+    panel.innerHTML = `<b>✅ 중복 없음</b> — 59·60·61기 조편성과 겹치는 2인 조합이 없습니다.`;
+    showToast('중복 없음');
+    return;
+  }
+
+  panel.className = 'dup-panel bad';
+  const items = conflicts.map(c=>{
+    const pastText = c.past.map(p=> `${p.cohort} ${p.jo}조`).join(', ');
+    // 카드 강조
+    const selA = rowsEl.querySelector(`.card[data-jo="${c.jo}"][data-role="${c.a.role}"]`);
+    const selB = rowsEl.querySelector(`.card[data-jo="${c.jo}"][data-role="${c.b.role}"]`);
+    if(selA) selA.classList.add('dup');
+    if(selB) selB.classList.add('dup');
+    return `<li><b>${c.jo}조</b>: ${c.a.name} · ${c.b.name} → 과거 ${pastText}에서 이미 같은 조</li>`;
+  }).join('');
+  panel.innerHTML = `<b>⚠️ 중복 ${conflicts.length}건 발견</b><ul>${items}</ul>`;
+  showToast(`중복 ${conflicts.length}건 발견`);
+}
 
 // ---- 구글시트 연동 ----
 // 배포한 Apps Script 웹 앱 URL을 여기에 붙여넣으세요.
@@ -574,6 +792,7 @@ function onDragEnd(){
   showToast(`${a.name} ↔ ${b.name} 자리 교체 완료`);
   render(dropJo, dropRole);
   hintbar.textContent = '카드를 눌러서 끌어보세요.';
+  document.getElementById('dupPanel').style.display = 'none';
   saveToSheet();
 }
 
@@ -581,8 +800,27 @@ document.getElementById('resetBtn').addEventListener('click', ()=>{
   data = JSON.parse(JSON.stringify(initialData));
   hintbar.textContent = '카드를 눌러서 끌어보세요.';
   render();
+  document.getElementById('dupPanel').style.display = 'none';
   showToast('처음 배치로 되돌렸습니다');
   saveToSheet();
+});
+
+document.getElementById('saveBtn').addEventListener('click', async ()=>{
+  showToast('저장 중...');
+  await saveToSheet();
+  showToast('구글시트에 저장되었습니다');
+});
+
+document.getElementById('dupBtn').addEventListener('click', runDuplicateCheck);
+
+document.querySelectorAll('.tab').forEach(btn=>{
+  btn.addEventListener('click', ()=>{
+    document.querySelectorAll('.tab').forEach(b=> b.classList.remove('active'));
+    btn.classList.add('active');
+    ['62','61','60','59'].forEach(k=>{
+      document.getElementById('tab-'+k).style.display = (k === btn.dataset.tab) ? '' : 'none';
+    });
+  });
 });
 
 render();
