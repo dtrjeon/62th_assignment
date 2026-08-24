@@ -850,6 +850,7 @@ let currentDropEl = null;
 let poolDropActive = false;
 const poolPanelEl = document.getElementById('poolPanel');
 let unsavedKeys = new Set(); // "jo-role" 형태, 아직 시트에 저장되지 않은 칸
+let pendingHistoryTexts = []; // 저장 버튼을 누르기 전까지 쌓인 변경이력(수동 저장 시 한꺼번에 전송)
 let selectedJoForGroupMove = null; // 조번호 탭으로 조 전체 이동할 때 첫 번째로 선택한 조
 
 // ---- 미등록 인원 풀 ----
@@ -948,16 +949,7 @@ function swapWholeGroups(sourceJo, targetJo){
 
   const historyText = `${sourceJo}조(${namesA}) ↔ ${targetJo}조(${namesB}) 조 전체 이동`;
   addHistoryLocal(historyText);
-
-  saveToSheet(historyText).then(ok=>{
-    if(ok){
-      roles.forEach(r=>{
-        unsavedKeys.delete(`${sourceJo}-${r}`);
-        unsavedKeys.delete(`${targetJo}-${r}`);
-      });
-      render();
-    }
-  });
+  pendingHistoryTexts.push(historyText);
 }
 
 // ---- 변경이력 ----
@@ -1213,14 +1205,7 @@ function handleGridSwap(sourceJo, sourceRole, dropJo, dropRole){
 
   const historyText = `${sourceJo}조 ${ROLE_LABEL[sourceRole]}(${a.name}) ↔ ${dropJo}조 ${ROLE_LABEL[dropRole]}(${b.name})`;
   addHistoryLocal(historyText);
-
-  saveToSheet(historyText).then(ok=>{
-    if(ok){
-      unsavedKeys.delete(`${sourceJo}-${sourceRole}`);
-      unsavedKeys.delete(`${dropJo}-${dropRole}`);
-      render();
-    }
-  });
+  pendingHistoryTexts.push(historyText);
 }
 
 function handlePoolDrop(poolId, dropJo, dropRole){
@@ -1251,13 +1236,7 @@ function handlePoolDrop(poolId, dropJo, dropRole){
     ? `${dropJo}조 ${ROLE_LABEL[dropRole]}: ${displaced.name} → ${person.name} 신규 배치 (${displaced.name}은 미등록으로 이동)`
     : `${dropJo}조 ${ROLE_LABEL[dropRole]} 공석 → ${person.name} 배치`;
   addHistoryLocal(historyText);
-
-  saveToSheet(historyText).then(ok=>{
-    if(ok){
-      unsavedKeys.delete(`${dropJo}-${dropRole}`);
-      render();
-    }
-  });
+  pendingHistoryTexts.push(historyText);
 }
 
 function emptySlot(){
@@ -1284,13 +1263,7 @@ function handleSendToPool(jo, role){
 
   const historyText = `${jo}조 ${ROLE_LABEL[role]}: ${person.name} → 미등록으로 이동 (공석)`;
   addHistoryLocal(historyText);
-
-  saveToSheet(historyText).then(ok=>{
-    if(ok){
-      unsavedKeys.delete(`${jo}-${role}`);
-      render();
-    }
-  });
+  pendingHistoryTexts.push(historyText);
 }
 
 document.getElementById('resetBtn').addEventListener('click', ()=>{
@@ -1301,18 +1274,23 @@ document.getElementById('resetBtn').addEventListener('click', ()=>{
   hintbar.textContent = '카드를 눌러서 끌어보세요.';
   render();
   document.getElementById('dupPanel').style.display = 'none';
-  showToast('처음 배치로 되돌렸습니다');
-  addHistoryLocal('전체 조편성을 처음 배치로 되돌림');
-  saveToSheet('전체 조편성을 처음 배치로 되돌림').then(ok=>{
-    if(ok){ unsavedKeys.clear(); render(); }
-  });
+  showToast('처음 배치로 되돌렸습니다 (아직 저장 전)');
+  const historyText = '전체 조편성을 처음 배치로 되돌림';
+  addHistoryLocal(historyText);
+  pendingHistoryTexts.push(historyText);
 });
 
 document.getElementById('saveBtn').addEventListener('click', async ()=>{
+  if(unsavedKeys.size === 0 && pendingHistoryTexts.length === 0){
+    showToast('저장할 변경사항이 없습니다');
+    return;
+  }
   showToast('저장 중...');
-  const ok = await saveToSheet();
+  const historyText = pendingHistoryTexts.length ? pendingHistoryTexts.join(' / ') : undefined;
+  const ok = await saveToSheet(historyText);
   if(ok){
     unsavedKeys.clear();
+    pendingHistoryTexts = [];
     render();
     showToast('구글시트에 저장되었습니다');
   }
