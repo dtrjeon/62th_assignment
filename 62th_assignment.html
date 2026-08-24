@@ -214,7 +214,7 @@
 
   .gridhead, .gridrow{
     display:grid;
-    grid-template-columns: 48px 1fr 1fr 1fr;
+    grid-template-columns: 48px repeat(var(--role-cols, 3), 1fr);
     gap:6px;
   }
   .gridhead{
@@ -537,9 +537,190 @@
     color:var(--ink-soft);
     font-weight:600;
   }
+
+  .subtabbar{
+    display:flex;
+    gap:6px;
+    padding:10px 10px 8px;
+    background:var(--panel);
+    border-bottom:1px solid var(--line);
+  }
+  .subtab{
+    flex:1;
+    font-family:inherit;
+    font-size:11.5px;
+    font-weight:600;
+    color:var(--ink-soft);
+    background:#F6F8FB;
+    border:1px solid var(--line);
+    border-radius:8px;
+    padding:6px 6px;
+    cursor:pointer;
+  }
+  .subtab.active{
+    color:#fff;
+    background:var(--groupA);
+    border-color:var(--groupA);
+  }
+
+  .settings-btn{
+    position:fixed;
+    top:14px;
+    right:14px;
+    z-index:50;
+    color:var(--ink-soft);
+  }
+
+  .modal-overlay{
+    position:fixed;
+    inset:0;
+    background:rgba(27,42,74,0.45);
+    z-index:100;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    padding:20px;
+  }
+  .modal-overlay.hidden{ display:none; }
+  .modal-panel{
+    background:var(--panel);
+    border-radius:var(--radius);
+    box-shadow:0 20px 60px rgba(27,42,74,0.35);
+    max-width:360px;
+    width:100%;
+    max-height:88vh;
+    overflow-y:auto;
+    padding:18px;
+  }
+  .modal-title{
+    font-family:'Noto Serif KR', serif;
+    font-size:16px;
+    font-weight:700;
+    color:var(--ink);
+    margin-bottom:14px;
+  }
+  .modal-section{
+    margin-bottom:16px;
+    padding-bottom:14px;
+    border-bottom:1px solid var(--line);
+  }
+  .modal-section:last-of-type{ border-bottom:none; }
+  .modal-label{
+    font-size:12.5px;
+    font-weight:700;
+    color:var(--ink);
+    margin-bottom:10px;
+  }
+  .modal-row{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:8px;
+    margin-bottom:8px;
+  }
+  .modal-row label{
+    font-size:12.5px;
+    color:var(--ink-soft);
+    display:flex;
+    align-items:center;
+    gap:6px;
+    flex:1;
+  }
+  .modal-row .dot{
+    width:9px;
+    height:9px;
+    border-radius:50%;
+    display:inline-block;
+  }
+  .modal-row input[type="number"]{
+    width:70px;
+    font-family:inherit;
+    font-size:13px;
+    padding:7px 8px;
+    border:1px solid var(--line);
+    border-radius:8px;
+    background:#fff;
+    color:var(--ink);
+    text-align:center;
+  }
+  .modal-row .unit{
+    font-size:11.5px;
+    color:var(--ink-soft);
+    width:14px;
+  }
+  .modal-hint{
+    font-size:11px;
+    color:var(--ink-soft);
+    line-height:1.6;
+    margin-top:6px;
+  }
+  .modal-actions{
+    display:flex;
+    justify-content:flex-end;
+    gap:8px;
+    margin-top:4px;
+  }
+  .modal-actions .primary{
+    color:#fff;
+    background:var(--ink);
+    border-color:var(--ink);
+  }
 </style>
 </head>
 <body>
+
+<button class="icon-btn settings-btn" id="settingsBtn" title="설정" aria-label="설정">
+  <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <circle cx="12" cy="12" r="3.2" stroke="currentColor" stroke-width="1.8"/>
+    <path d="M19.4 13.2a1.7 1.7 0 0 0 .34 1.87l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.7 1.7 0 0 0-1.87-.34 1.7 1.7 0 0 0-1.03 1.56V19a2 2 0 1 1-4 0v-.09A1.7 1.7 0 0 0 9 17.35a1.7 1.7 0 0 0-1.87.34l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.7 1.7 0 0 0 4.65 13.2 1.7 1.7 0 0 0 3.09 12.16H3a2 2 0 1 1 0-4h.09A1.7 1.7 0 0 0 4.65 7a1.7 1.7 0 0 0-.34-1.87l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.7 1.7 0 0 0 9 2.65 1.7 1.7 0 0 0 10.03 1.09V1a2 2 0 1 1 4 0v.09A1.7 1.7 0 0 0 15 2.65a1.7 1.7 0 0 0 1.87-.34l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.7 1.7 0 0 0 19.35 7a1.7 1.7 0 0 0 1.56 1.03H21a2 2 0 1 1 0 4h-.09a1.7 1.7 0 0 0-1.56 1.03Z" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round"/>
+  </svg>
+</button>
+
+<div class="modal-overlay hidden" id="settingsOverlay">
+  <div class="modal-panel">
+    <div class="modal-title">⚙️ 설정</div>
+
+    <div class="modal-section">
+      <div class="modal-label">1. 조편성 구조 (행 × 열)</div>
+      <div class="modal-row">
+        <label for="structRowsInput">행 (조 개수)</label>
+        <input type="number" id="structRowsInput" min="1" max="50" value="11">
+      </div>
+      <div class="modal-row">
+        <label for="structColsInput">열 (역할 슬롯 개수)</label>
+        <input type="number" id="structColsInput" min="1" max="8" value="4">
+      </div>
+    </div>
+
+    <div class="modal-section">
+      <div class="modal-label">2. 그룹별 조 개수</div>
+      <div class="modal-row">
+        <label for="groupAInput"><i class="dot" style="background:var(--groupA)"></i> A</label>
+        <input type="number" id="groupAInput" min="0" max="50" value="3"> <span class="unit">조</span>
+      </div>
+      <div class="modal-row">
+        <label for="groupBInput"><i class="dot" style="background:var(--groupB)"></i> B</label>
+        <input type="number" id="groupBInput" min="0" max="50" value="3"> <span class="unit">조</span>
+      </div>
+      <div class="modal-row">
+        <label for="groupCInput"><i class="dot" style="background:var(--groupC)"></i> C</label>
+        <input type="number" id="groupCInput" min="0" max="50" value="3"> <span class="unit">조</span>
+      </div>
+      <div class="modal-row">
+        <label for="groupDInput"><i class="dot" style="background:var(--groupD)"></i> D</label>
+        <input type="number" id="groupDInput" min="0" max="50" value="2"> <span class="unit">조</span>
+      </div>
+      <div class="modal-hint" id="settingsHint">그룹별 조 개수의 합은 행(조 개수)과 같아야 합니다. 앞의 조부터 순서대로 A→B→C→D 그룹이 배정됩니다.</div>
+    </div>
+
+    <div class="modal-hint">구조가 줄어들면 사라지는 칸/조의 인원은 자동으로 "미등록 인원"으로 이동합니다. (현재 보고 있는 안에만 적용됩니다)</div>
+
+    <div class="modal-actions">
+      <button class="reset" id="settingsCancelBtn">닫기</button>
+      <button class="reset primary" id="settingsApplyBtn">적용</button>
+    </div>
+  </div>
+</div>
 
 <header>
   <h1>수주반 62기 조편성</h1>
@@ -619,12 +800,11 @@
 
 <main id="main">
   <div class="gridwrap" id="tab-62">
-    <div class="gridhead">
-      <div>조</div>
-      <div>조장</div>
-      <div>훈련자</div>
-      <div>훈련생</div>
+    <div class="subtabbar" id="subtabbar">
+      <button class="subtab active" data-plan="1">1안</button>
+      <button class="subtab" data-plan="2">2안</button>
     </div>
+    <div class="gridhead" id="gridHead"></div>
     <div id="rows"></div>
   </div>
   <div class="pastwrap" id="tab-61" style="display:none;">
@@ -666,7 +846,36 @@ const initialData = [
 
 let data = JSON.parse(JSON.stringify(initialData));
 
-const ROLE_LABEL = { leader:'조장', trainer:'훈련자', trainee:'훈련생' };
+let roleKeys = ['leader','trainer','trainee'];
+let ROLE_LABEL = { leader:'조장', trainer:'훈련자', trainee:'훈련생' };
+
+function roleKeyAt(i){
+  if(i === 0) return 'leader';
+  if(i === 1) return 'trainer';
+  if(i === 2) return 'trainee';
+  return `trainee${i - 1}`; // trainee2, trainee3, ...
+}
+function roleLabelAt(i){
+  if(i === 0) return '조장';
+  if(i === 1) return '훈련자';
+  if(i === 2) return '훈련생';
+  return `훈련생${i - 1}`;
+}
+function roleClassAt(i){
+  if(i === 0) return 'leader';
+  if(i === 1) return 'trainer';
+  return 'trainee';
+}
+function buildRoleKeys(cols){
+  const keys = [];
+  for(let i=0;i<cols;i++) keys.push(roleKeyAt(i));
+  return keys;
+}
+function buildRoleLabelMap(keys){
+  const map = {};
+  keys.forEach((k,i)=> map[k] = roleLabelAt(i));
+  return map;
+}
 
 // ---- 과거 기수 조편성 데이터 (중복체크용, 이름만) ----
 const pastCohorts = {
@@ -752,12 +961,10 @@ function runDuplicateCheck(){
   const conflicts = [];
 
   data.forEach(j=>{
-    const members = [
-      { role:'leader', raw: j.leader.name },
-      { role:'trainer', raw: j.trainer.name },
-      { role:'trainee', raw: j.trainee.name },
-    ].map(m=> ({ role: m.role, name: normalizeName(m.raw) }))
-     .filter(m=> m.name);
+    const members = roleKeys
+      .map(k=> ({ role: k, raw: j[k] ? j[k].name : null }))
+      .map(m=> ({ role: m.role, name: normalizeName(m.raw) }))
+      .filter(m=> m.name);
 
     combos2(members).forEach(([m1, m2])=>{
       const k = pairKey(m1.name, m2.name);
@@ -802,11 +1009,10 @@ function runDuplicateCheck(){
 const SHEET_WEBHOOK_URL = "https://script.google.com/macros/s/AKfycbyLDz2Wf3shEtZWwanwKwhzcYmOXscBUI61vK3SkrxYZeNXNQQmbhkr3pYqE9a_GJjEmQ/exec";
 
 function dataToRows(d){
-  const roles = [['leader','조장'], ['trainer','훈련자'], ['trainee','훈련생']];
   const rows = [];
   d.forEach(j=>{
-    roles.forEach(([key])=>{
-      const p = j[key];
+    roleKeys.forEach(key=>{
+      const p = j[key] || emptySlot();
       rows.push({ jo: j.no, group: j.group, role: key, code: p.code, lvl: p.lvl, name: p.name });
     });
   });
@@ -827,9 +1033,10 @@ async function loadFromSheet(){
   if(!SHEET_WEBHOOK_URL || SHEET_WEBHOOK_URL.includes('여기에')) return;
   try{
     hintbar.textContent = '구글시트에서 불러오는 중...';
-    const res = await fetch(SHEET_WEBHOOK_URL);
+    const url = `${SHEET_WEBHOOK_URL}${SHEET_WEBHOOK_URL.includes('?') ? '&' : '?'}plan=${encodeURIComponent(activePlan)}`;
+    const res = await fetch(url);
     const json = await res.json();
-    if(json.ok && json.rows && json.rows.length === 30){
+    if(json.ok && json.rows && json.rows.length === data.length * roleKeys.length){
       data = rowsToData(json.rows);
       unsavedKeys.clear();
       render();
@@ -853,7 +1060,7 @@ async function saveToSheet(historyText){
     const res = await fetch(SHEET_WEBHOOK_URL, {
       method: 'POST',
       headers: { 'Content-Type': 'text/plain' }, // preflight(OPTIONS) 회피용
-      body: JSON.stringify({ rows: dataToRows(data), historyText: historyText || undefined }),
+      body: JSON.stringify({ plan: activePlan, rows: dataToRows(data), historyText: historyText || undefined }),
     });
     const json = await res.json().catch(()=>null);
     if(json && json.ok && Array.isArray(json.history)){
@@ -883,6 +1090,59 @@ const poolPanelEl = document.getElementById('poolPanel');
 let unsavedKeys = new Set(); // "jo-role" 형태, 아직 시트에 저장되지 않은 칸
 let pendingHistoryTexts = []; // 저장 버튼을 누르기 전까지 쌓인 변경이력(수동 저장 시 한꺼번에 전송)
 let selectedJoForGroupMove = null; // 조번호 탭으로 조 전체 이동할 때 첫 번째로 선택한 조
+
+// ---- 62기 1안/2안 (복수 시안) ----
+// data, unsavedKeys, historyLog, unregisteredPeople, selectedJoForGroupMove,
+// pendingHistoryTexts, roleKeys, ROLE_LABEL는 "현재 보고 있는 안"의 작업 상태이며,
+// 안을 전환할 때 plans에 스냅샷/복원한다.
+let activePlan = '1';
+const plans = {}; // planKey -> 스냅샷 상태
+
+function snapshotWorkingState(){
+  return { data, unsavedKeys, historyLog, unregisteredPeople, selectedJoForGroupMove, pendingHistoryTexts, roleKeys, roleLabel: ROLE_LABEL };
+}
+function loadWorkingState(state){
+  data = state.data;
+  unsavedKeys = state.unsavedKeys;
+  historyLog = state.historyLog;
+  unregisteredPeople = state.unregisteredPeople;
+  selectedJoForGroupMove = state.selectedJoForGroupMove;
+  pendingHistoryTexts = state.pendingHistoryTexts;
+  roleKeys = state.roleKeys;
+  ROLE_LABEL = state.roleLabel;
+}
+function defaultPlanState(){
+  return {
+    data: JSON.parse(JSON.stringify(initialData)),
+    unsavedKeys: new Set(),
+    historyLog: [],
+    unregisteredPeople: [],
+    selectedJoForGroupMove: null,
+    pendingHistoryTexts: [],
+    roleKeys: ['leader','trainer','trainee'],
+    roleLabel: { leader:'조장', trainer:'훈련자', trainee:'훈련생' },
+  };
+}
+
+function switchPlan(newPlan){
+  if(newPlan === activePlan) return;
+  plans[activePlan] = snapshotWorkingState();
+  activePlan = newPlan;
+  loadWorkingState(plans[activePlan] || defaultPlanState());
+
+  document.querySelectorAll('.subtab').forEach(b=> b.classList.toggle('active', b.dataset.plan === activePlan));
+  document.getElementById('dupPanel').style.display = 'none';
+  hintbar.textContent = '카드를 눌러서 끌어보세요.';
+
+  render();
+  renderPool();
+  renderHistory();
+  loadFromSheet();
+}
+
+document.querySelectorAll('.subtab').forEach(btn=>{
+  btn.addEventListener('click', ()=> switchPlan(btn.dataset.plan));
+});
 
 // ---- 미등록 인원 풀 ----
 let unregisteredPeople = []; // [{id, code, lvl, name}, ...]
@@ -960,7 +1220,7 @@ function onJoTagClick(joNo, tagEl){
 function swapWholeGroups(sourceJo, targetJo){
   const rowA = findRow(sourceJo);
   const rowB = findRow(targetJo);
-  const roles = ['leader','trainer','trainee'];
+  const roles = roleKeys;
 
   const namesA = roles.map(r=> rowA[r].name).join('/');
   const namesB = roles.map(r=> rowB[r].name).join('/');
@@ -1024,7 +1284,18 @@ function findRow(joNo){ return data.find(j => j.no === joNo); }
 function findSlot(joNo, role){ return findRow(joNo)[role]; }
 function setSlot(joNo, role, person){ findRow(joNo)[role] = person; }
 
+function applyGridColumns(){
+  document.getElementById('tab-62').style.setProperty('--role-cols', roleKeys.length);
+}
+function renderGridHead(){
+  const head = document.getElementById('gridHead');
+  head.innerHTML = `<div>조</div>` + roleKeys.map(k=> `<div>${ROLE_LABEL[k]}</div>`).join('');
+}
+
 function render(highlightJo, highlightRole){
+  applyGridColumns();
+  renderGridHead();
+
   rowsEl.innerHTML = '';
   data.forEach(j=>{
     const row = document.createElement('div');
@@ -1036,9 +1307,9 @@ function render(highlightJo, highlightRole){
     tag.addEventListener('click', ()=> onJoTagClick(j.no, tag));
     row.appendChild(tag);
 
-    row.appendChild(makeCard(j.no, 'leader', j.leader, '조장', 'leader'));
-    row.appendChild(makeCard(j.no, 'trainer', j.trainer, '훈련자', 'trainer'));
-    row.appendChild(makeCard(j.no, 'trainee', j.trainee, '훈련생', 'trainee'));
+    roleKeys.forEach((key, idx)=>{
+      row.appendChild(makeCard(j.no, key, j[key] || emptySlot(), ROLE_LABEL[key], roleClassAt(idx)));
+    });
 
     rowsEl.appendChild(row);
   });
@@ -1299,9 +1570,11 @@ function handleSendToPool(jo, role){
 
 document.getElementById('resetBtn').addEventListener('click', ()=>{
   data = JSON.parse(JSON.stringify(initialData));
+  roleKeys = ['leader','trainer','trainee'];
+  ROLE_LABEL = { leader:'조장', trainer:'훈련자', trainee:'훈련생' };
   unsavedKeys.clear();
   selectedJoForGroupMove = null;
-  data.forEach(j=> ['leader','trainer','trainee'].forEach(r=> unsavedKeys.add(`${j.no}-${r}`)));
+  data.forEach(j=> roleKeys.forEach(r=> unsavedKeys.add(`${j.no}-${r}`)));
   hintbar.textContent = '카드를 눌러서 끌어보세요.';
   render();
   document.getElementById('dupPanel').style.display = 'none';
@@ -1330,21 +1603,21 @@ document.getElementById('saveBtn').addEventListener('click', async ()=>{
 document.getElementById('dupBtn').addEventListener('click', runDuplicateCheck);
 
 document.getElementById('xlsxBtn').addEventListener('click', ()=>{
-  const header = ['조','그룹','조장','훈련자','훈련생'];
+  const header = ['조','그룹', ...roleKeys.map(k=> ROLE_LABEL[k])];
   const labelText = p => {
-    if(!p.name) return '공석';
+    if(!p || !p.name) return '공석';
     return p.lvl === 'H' ? p.name : `${p.lvl})${p.name}`;
   };
   const rows = data.map(j=> [
     `${j.no}조`, `${j.group}그룹`,
-    labelText(j.leader), labelText(j.trainer), labelText(j.trainee),
+    ...roleKeys.map(k=> labelText(j[k])),
   ]);
   const sheetData = [header, ...rows];
   const ws = XLSX.utils.aoa_to_sheet(sheetData);
-  ws['!cols'] = [{wch:6},{wch:8},{wch:14},{wch:14},{wch:14}];
+  ws['!cols'] = [{wch:6},{wch:8}, ...roleKeys.map(()=> ({wch:14}))];
   const wb = XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(wb, ws, '62기 조편성');
-  XLSX.writeFile(wb, '62기_조편성.xlsx');
+  XLSX.utils.book_append_sheet(wb, ws, `62기 ${activePlan}안`);
+  XLSX.writeFile(wb, `62기_${activePlan}안_조편성.xlsx`);
   showToast('엑셀 파일로 저장했습니다');
 });
 
@@ -1357,6 +1630,115 @@ document.querySelectorAll('.tab').forEach(btn=>{
     });
   });
 });
+
+// ---- 설정 (조편성 구조 / 그룹별 조 개수) ----
+const settingsOverlay = document.getElementById('settingsOverlay');
+
+function countGroups(){
+  const counts = { A:0, B:0, C:0, D:0 };
+  data.forEach(j=>{ if(counts[j.group] !== undefined) counts[j.group]++; });
+  return counts;
+}
+
+function openSettings(){
+  const counts = countGroups();
+  document.getElementById('groupAInput').value = counts.A;
+  document.getElementById('groupBInput').value = counts.B;
+  document.getElementById('groupCInput').value = counts.C;
+  document.getElementById('groupDInput').value = counts.D;
+  settingsOverlay.classList.remove('hidden');
+}
+function closeSettings(){
+  settingsOverlay.classList.add('hidden');
+}
+
+document.getElementById('settingsBtn').addEventListener('click', openSettings);
+document.getElementById('settingsCancelBtn').addEventListener('click', closeSettings);
+settingsOverlay.addEventListener('click', (e)=>{
+  if(e.target === settingsOverlay) closeSettings();
+});
+
+document.getElementById('settingsApplyBtn').addEventListener('click', ()=>{
+  const rows = parseInt(document.getElementById('structRowsInput').value, 10);
+  const cols = parseInt(document.getElementById('structColsInput').value, 10);
+  const gA = parseInt(document.getElementById('groupAInput').value, 10) || 0;
+  const gB = parseInt(document.getElementById('groupBInput').value, 10) || 0;
+  const gC = parseInt(document.getElementById('groupCInput').value, 10) || 0;
+  const gD = parseInt(document.getElementById('groupDInput').value, 10) || 0;
+
+  if(!rows || rows < 1 || rows > 50 || !cols || cols < 1 || cols > 8){
+    showToast('행/열 값을 확인해주세요');
+    return;
+  }
+  const groupSum = gA + gB + gC + gD;
+  if(groupSum !== rows){
+    showToast(`그룹 조 합계(${groupSum})가 행 수(${rows})와 일치해야 합니다`);
+    return;
+  }
+
+  applyStructure(rows, cols, [['A', gA], ['B', gB], ['C', gC], ['D', gD]]);
+  closeSettings();
+});
+
+function applyStructure(newRows, newCols, groupPlan){
+  const oldRoleKeys = roleKeys.slice();
+  const newRoleKeys = buildRoleKeys(newCols);
+  const newRoleLabel = buildRoleLabelMap(newRoleKeys);
+
+  // 사라지는 역할 칸(열)의 인원 -> 미등록
+  data.forEach(row=>{
+    oldRoleKeys.forEach(k=>{
+      if(!newRoleKeys.includes(k) && row[k] && row[k].name){
+        unregisteredPeople.push({ id: poolIdCounter++, code: row[k].code, lvl: row[k].lvl, name: row[k].name });
+      }
+    });
+  });
+  // 사라지는 조(행)의 인원 전원 -> 미등록
+  if(newRows < data.length){
+    data.slice(newRows).forEach(row=>{
+      oldRoleKeys.forEach(k=>{
+        if(row[k] && row[k].name){
+          unregisteredPeople.push({ id: poolIdCounter++, code: row[k].code, lvl: row[k].lvl, name: row[k].name });
+        }
+      });
+    });
+  }
+
+  // 그룹 배정: groupPlan([그룹,개수]...) 순서대로 앞의 조부터 채움
+  const groupForIndex = [];
+  groupPlan.forEach(([g, count])=>{
+    for(let i=0;i<count;i++) groupForIndex.push(g);
+  });
+
+  const newData = [];
+  for(let i=0;i<newRows;i++){
+    const no = i + 1;
+    const group = groupForIndex[i] || (data[i] ? data[i].group : 'A');
+    const row = { no, group };
+    newRoleKeys.forEach(k=>{
+      row[k] = (data[i] && data[i][k]) ? data[i][k] : emptySlot();
+    });
+    newData.push(row);
+  }
+
+  data = newData;
+  roleKeys = newRoleKeys;
+  ROLE_LABEL = newRoleLabel;
+
+  unsavedKeys.clear();
+  data.forEach(j=> roleKeys.forEach(k=> unsavedKeys.add(`${j.no}-${k}`)));
+
+  renderPool();
+  render();
+  document.getElementById('dupPanel').style.display = 'none';
+  hintbar.textContent = '카드를 눌러서 끌어보세요.';
+
+  const groupSummary = groupPlan.map(([g,c])=> `${g}${c}`).join('/');
+  const historyText = `조편성 구조 변경: ${newRows}행 × ${newCols}열, 그룹 ${groupSummary}조 (아직 저장 전)`;
+  addHistoryLocal(historyText);
+  pendingHistoryTexts.push(historyText);
+  showToast(`구조를 ${newRows}행 × ${newCols}열로 변경했습니다`);
+}
 
 render();
 renderPool();
