@@ -327,6 +327,11 @@
   .card.just-dropped{
     animation: pop .32s ease;
   }
+  .card.card-selected{
+    box-shadow: 0 0 0 3px #fff, 0 0 0 6px #2563eb;
+    transform: scale(1.03);
+    z-index: 2;
+  }
   @keyframes pop{
     0%{ transform:scale(1.08); }
     100%{ transform:scale(1); }
@@ -728,7 +733,7 @@
 </header>
 
 <div class="toolbar">
-  <div class="hint" id="hintbar">카드를 눌러서 끌어보세요. (조번호를 누르면 조 전체 이동)</div>
+  <div class="hint" id="hintbar">카드를 끌거나, 눌러서 선택 후 이동할 칸을 눌러도 됩니다. (조번호를 누르면 조 전체 이동)</div>
   <button class="icon-btn save" id="saveBtn" title="저장하기" aria-label="저장하기">
     <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
       <path d="M5 4.5C5 3.67157 5.67157 3 6.5 3H15.5L20 7.5V19.5C20 20.3284 19.3284 21 18.5 21H6.5C5.67157 21 5 20.3284 5 19.5V4.5Z" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/>
@@ -1103,6 +1108,7 @@ const poolPanelEl = document.getElementById('poolPanel');
 let unsavedKeys = new Set(); // "jo-role" 형태, 아직 시트에 저장되지 않은 칸
 let pendingHistoryTexts = []; // 저장 버튼을 누르기 전까지 쌓인 변경이력(수동 저장 시 한꺼번에 전송)
 let selectedJoForGroupMove = null; // 조번호 탭으로 조 전체 이동할 때 첫 번째로 선택한 조
+let selectedCardForMove = null; // 카드 탭으로 선택→탭으로 배치할 때 { source, el }
 
 // ---- 62기 1안/2안 (복수 시안) ----
 // data, unsavedKeys, historyLog, unregisteredPeople, selectedJoForGroupMove,
@@ -1142,6 +1148,7 @@ function switchPlan(newPlan){
   plans[activePlan] = snapshotWorkingState();
   activePlan = newPlan;
   loadWorkingState(plans[activePlan] || defaultPlanState());
+  selectedCardForMove = null;
 
   document.querySelectorAll('.subtab').forEach(b=> b.classList.toggle('active', b.dataset.plan === activePlan));
   document.getElementById('dupPanel').style.display = 'none';
@@ -1361,7 +1368,10 @@ function makeCard(joNo, roleKey, person, roleLabel, roleClass){
 
 function onPointerDown(e, source, el){
   if(drag) return;
-  if(source.type === 'grid' && el.classList.contains('vacant')) return; // 공석은 끌 수 없고 드롭 대상으로만 사용
+
+  // 공석 카드는 끌 수는 없지만(옮길 사람이 없음), 탭으로 배치받는 대상으로는 써야 하므로
+  // 탭 감지는 하되 롱프레스 드래그는 활성화하지 않는다.
+  const isVacantGrid = source.type === 'grid' && el.classList.contains('vacant');
 
   const x = e.clientX, y = e.clientY;
 
@@ -1370,6 +1380,8 @@ function onPointerDown(e, source, el){
   window.addEventListener('pointermove', onPendingMove);
   window.addEventListener('pointerup', onPendingUp);
   window.addEventListener('pointercancel', onPendingCancel);
+
+  if(isVacantGrid) return; // 탭(pointerup) 처리만 필요, 롱프레스 타이머는 불필요
 
   pending.timer = setTimeout(()=>{
     if(!pending) return;
@@ -1393,7 +1405,12 @@ function onPendingMove(e){
   }
 }
 
-function onPendingUp(){ cancelPending(); }
+function onPendingUp(){
+  if(!pending) return;
+  const { source, el } = pending;
+  cancelPending();
+  handleCardTap(source, el);
+}
 function onPendingCancel(){ cancelPending(); }
 
 function cancelPending(){
@@ -1504,6 +1521,61 @@ function onDragEnd(){
   }
 }
 
+function sameCardSource(a, b){
+  if(a.type !== b.type) return false;
+  if(a.type === 'pool') return a.id === b.id;
+  return a.jo === b.jo && a.role === b.role;
+}
+
+function clearCardSelection(){
+  if(selectedCardForMove && selectedCardForMove.el){
+    selectedCardForMove.el.classList.remove('card-selected');
+  }
+  selectedCardForMove = null;
+}
+
+// 드래그 대신 "탭으로 선택 → 탭으로 배치"하는 방식.
+// 화면 스크롤이 길어 드래그가 어려운 경우(예: 미배치 패널에서 아래쪽 조로 이동)에 특히 유용하다.
+function handleCardTap(source, el){
+  const isVacant = source.type === 'grid' && el.classList.contains('vacant');
+
+  if(!selectedCardForMove){
+    if(isVacant){
+      hintbar.textContent = '먼저 이동할 카드를 눌러 선택한 뒤, 옮길 빈 칸을 눌러주세요.';
+      return;
+    }
+    selectedCardForMove = { source, el };
+    el.classList.add('card-selected');
+    hintbar.textContent = '선택됨 — 이동할 칸을 눌러주세요. (같은 카드를 다시 누르면 취소)';
+    return;
+  }
+
+  // 같은 카드를 다시 탭하면 선택 취소
+  if(sameCardSource(selectedCardForMove.source, source)){
+    clearCardSelection();
+    hintbar.textContent = '카드를 눌러서 끌어보세요.';
+    return;
+  }
+
+  // 그리드가 아닌 다른 카드(예: 다른 미배치 카드)를 탭하면 선택을 그 카드로 교체
+  if(source.type !== 'grid'){
+    clearCardSelection();
+    selectedCardForMove = { source, el };
+    el.classList.add('card-selected');
+    hintbar.textContent = '선택됨 — 이동할 칸을 눌러주세요. (같은 카드를 다시 누르면 취소)';
+    return;
+  }
+
+  const srcSource = selectedCardForMove.source;
+  clearCardSelection();
+
+  if(srcSource.type === 'grid'){
+    handleGridSwap(srcSource.jo, srcSource.role, source.jo, source.role);
+  } else if(srcSource.type === 'pool'){
+    handlePoolDrop(srcSource.id, source.jo, source.role);
+  }
+}
+
 function handleGridSwap(sourceJo, sourceRole, dropJo, dropRole){
   const a = findSlot(sourceJo, sourceRole);
   const b = findSlot(dropJo, dropRole);
@@ -1587,6 +1659,7 @@ document.getElementById('resetBtn').addEventListener('click', ()=>{
   ROLE_LABEL = { leader:'조장', trainer:'훈련자', trainee:'훈련생' };
   unsavedKeys.clear();
   selectedJoForGroupMove = null;
+  selectedCardForMove = null;
   data.forEach(j=> roleKeys.forEach(r=> unsavedKeys.add(`${j.no}-${r}`)));
   hintbar.textContent = '카드를 눌러서 끌어보세요.';
   render();
@@ -1740,6 +1813,7 @@ function applyStructure(newRows, newCols, groupPlan){
 
   unsavedKeys.clear();
   data.forEach(j=> roleKeys.forEach(k=> unsavedKeys.add(`${j.no}-${k}`)));
+  selectedCardForMove = null;
 
   renderPool();
   render();
