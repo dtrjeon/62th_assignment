@@ -506,6 +506,23 @@
     line-height:1;
   }
   .pool-del:active{ color:#C43C4A; }
+
+  .pool-panel{ transition: box-shadow .15s ease; }
+  .pool-panel.pool-drop-target{
+    box-shadow: 0 0 0 2.5px var(--gold) inset, var(--shadow);
+  }
+
+  .card.vacant{
+    background:#F4F5F8;
+    border:1.5px dashed var(--line);
+    cursor:default;
+  }
+  .card.vacant .role{ color:var(--ink-soft); opacity:0.6; }
+  .vacant-label{
+    font-size:12.5px;
+    color:var(--ink-soft);
+    font-weight:600;
+  }
 </style>
 </head>
 <body>
@@ -534,7 +551,7 @@
 <div id="dupPanel" class="dup-panel" style="display:none;"></div>
 
 <div class="pool-panel" id="poolPanel">
-  <div class="pool-head">🆕 미등록 인원 — 등록 후 카드를 조에 끌어다 놓으면 그 자리에 배치되고, 기존 인원은 미등록으로 이동합니다.</div>
+  <div class="pool-head">🆕 미등록 인원 — 등록한 카드를 조 자리에 끌어놓으면 배치되고, 조에 있는 카드를 이 패널 위로 끌어놓으면 미배치로 이동합니다.</div>
   <div class="pool-form">
     <input type="text" id="poolNameInput" placeholder="이름">
     <select id="poolLvlSelect">
@@ -830,6 +847,8 @@ const MOVE_CANCEL_PX = 9;
 let pending = null;
 let drag = null;
 let currentDropEl = null;
+let poolDropActive = false;
+const poolPanelEl = document.getElementById('poolPanel');
 let unsavedKeys = new Set(); // "jo-role" 형태, 아직 시트에 저장되지 않은 칸
 let selectedJoForGroupMove = null; // 조번호 탭으로 조 전체 이동할 때 첫 번째로 선택한 조
 
@@ -1009,17 +1028,25 @@ function render(highlightJo, highlightRole){
 
 function makeCard(joNo, roleKey, person, roleLabel, roleClass){
   const el = document.createElement('div');
+  const isVacant = !person.name;
   const isHelper = person.lvl === 'H';
-  el.className = `card ${roleClass}${isHelper ? ' helper-code' : ''}`;
+  el.className = `card ${roleClass}${isHelper ? ' helper-code' : ''}${isVacant ? ' vacant' : ''}`;
   el.dataset.jo = joNo;
   el.dataset.role = roleKey;
 
-  const codeText = isHelper ? person.code : `${person.lvl})`;
-  const unsavedClass = unsavedKeys.has(`${joNo}-${roleKey}`) ? ' unsaved' : '';
-  el.innerHTML = `
-    <div class="role">${roleLabel}</div>
-    <div class="nm${unsavedClass}"><span class="code">${codeText}</span>${person.name}</div>
-  `;
+  if(isVacant){
+    el.innerHTML = `
+      <div class="role">${roleLabel}</div>
+      <div class="nm vacant-label">공석</div>
+    `;
+  } else {
+    const codeText = isHelper ? person.code : `${person.lvl})`;
+    const unsavedClass = unsavedKeys.has(`${joNo}-${roleKey}`) ? ' unsaved' : '';
+    el.innerHTML = `
+      <div class="role">${roleLabel}</div>
+      <div class="nm${unsavedClass}"><span class="code">${codeText}</span>${person.name}</div>
+    `;
+  }
 
   el.addEventListener('pointerdown', (e)=> onPointerDown(e, { type:'grid', jo: joNo, role: roleKey }, el));
   return el;
@@ -1027,6 +1054,7 @@ function makeCard(joNo, roleKey, person, roleLabel, roleClass){
 
 function onPointerDown(e, source, el){
   if(drag) return;
+  if(source.type === 'grid' && el.classList.contains('vacant')) return; // 공석은 끌 수 없고 드롭 대상으로만 사용
 
   const x = e.clientX, y = e.clientY;
 
@@ -1117,6 +1145,11 @@ function onDragMove(e){
     targetCard.classList.add('drop-target');
     currentDropEl = targetCard;
   }
+
+  // 조 카드를 미등록 패널 위로 끌면 미배치로 보낼 수 있음(공석 카드로는 보낼 수 없음)
+  const overPool = drag.source.type === 'grid' && !!(under && under.closest('#poolPanel'));
+  poolDropActive = overPool;
+  poolPanelEl.classList.toggle('pool-drop-target', overPool);
 }
 
 function onDragEnd(){
@@ -1128,6 +1161,7 @@ function onDragEnd(){
 
   drag.ghost.remove();
   drag.el.classList.remove('dragging');
+  poolPanelEl.classList.remove('pool-drop-target');
 
   let dropJo = null, dropRole = null;
   if(currentDropEl){
@@ -1138,7 +1172,14 @@ function onDragEnd(){
   currentDropEl = null;
 
   const source = drag.source;
+  const droppedOnPool = poolDropActive;
+  poolDropActive = false;
   drag = null;
+
+  if(droppedOnPool && source.type === 'grid'){
+    handleSendToPool(source.jo, source.role);
+    return;
+  }
 
   if(dropJo === null){
     hintbar.textContent = '카드를 눌러서 끌어보세요.';
@@ -1193,22 +1234,60 @@ function handlePoolDrop(poolId, dropJo, dropRole){
   setSlot(dropJo, dropRole, { code: person.code, lvl: person.lvl, name: person.name });
 
   unregisteredPeople = unregisteredPeople.filter(p=> p.id !== poolId);
-  unregisteredPeople.push({ id: poolIdCounter++, code: displaced.code, lvl: displaced.lvl, name: displaced.name });
+  if(displaced.name){
+    unregisteredPeople.push({ id: poolIdCounter++, code: displaced.code, lvl: displaced.lvl, name: displaced.name });
+  }
   renderPool();
 
   unsavedKeys.add(`${dropJo}-${dropRole}`);
 
-  showToast(`${person.name} → ${dropJo}조 ${ROLE_LABEL[dropRole]} 배치 (${displaced.name}은 미등록으로 이동)`);
+  const displacedText = displaced.name ? ` (${displaced.name}은 미등록으로 이동)` : ' (공석에 배치)';
+  showToast(`${person.name} → ${dropJo}조 ${ROLE_LABEL[dropRole]} 배치${displacedText}`);
   render(dropJo, dropRole);
   hintbar.textContent = '카드를 눌러서 끌어보세요.';
   document.getElementById('dupPanel').style.display = 'none';
 
-  const historyText = `${dropJo}조 ${ROLE_LABEL[dropRole]}: ${displaced.name} → ${person.name} 신규 배치 (${displaced.name}은 미등록으로 이동)`;
+  const historyText = displaced.name
+    ? `${dropJo}조 ${ROLE_LABEL[dropRole]}: ${displaced.name} → ${person.name} 신규 배치 (${displaced.name}은 미등록으로 이동)`
+    : `${dropJo}조 ${ROLE_LABEL[dropRole]} 공석 → ${person.name} 배치`;
   addHistoryLocal(historyText);
 
   saveToSheet(historyText).then(ok=>{
     if(ok){
       unsavedKeys.delete(`${dropJo}-${dropRole}`);
+      render();
+    }
+  });
+}
+
+function emptySlot(){
+  return { code:'', lvl:'', name:'' };
+}
+
+function handleSendToPool(jo, role){
+  const person = findSlot(jo, role);
+  if(!person || !person.name){
+    hintbar.textContent = '카드를 눌러서 끌어보세요.';
+    return;
+  }
+
+  unregisteredPeople.push({ id: poolIdCounter++, code: person.code, lvl: person.lvl, name: person.name });
+  setSlot(jo, role, emptySlot());
+  renderPool();
+
+  unsavedKeys.add(`${jo}-${role}`);
+
+  showToast(`${person.name} → 미등록으로 이동 (${jo}조 ${ROLE_LABEL[role]} 공석)`);
+  render(jo, role);
+  hintbar.textContent = '카드를 눌러서 끌어보세요.';
+  document.getElementById('dupPanel').style.display = 'none';
+
+  const historyText = `${jo}조 ${ROLE_LABEL[role]}: ${person.name} → 미등록으로 이동 (공석)`;
+  addHistoryLocal(historyText);
+
+  saveToSheet(historyText).then(ok=>{
+    if(ok){
+      unsavedKeys.delete(`${jo}-${role}`);
       render();
     }
   });
@@ -1243,7 +1322,10 @@ document.getElementById('dupBtn').addEventListener('click', runDuplicateCheck);
 
 document.getElementById('xlsxBtn').addEventListener('click', ()=>{
   const header = ['조','그룹','조장','훈련자','훈련생'];
-  const labelText = p => p.lvl === 'H' ? p.name : `${p.lvl})${p.name}`;
+  const labelText = p => {
+    if(!p.name) return '공석';
+    return p.lvl === 'H' ? p.name : `${p.lvl})${p.name}`;
+  };
   const rows = data.map(j=> [
     `${j.no}조`, `${j.group}그룹`,
     labelText(j.leader), labelText(j.trainer), labelText(j.trainee),
