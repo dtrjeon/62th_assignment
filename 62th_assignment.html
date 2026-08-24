@@ -1029,6 +1029,17 @@ function rowsToData(rows){
   return Object.values(map).sort((a,b)=> a.no - b.no);
 }
 
+function deriveRoleKeysFromRows(rows){
+  const present = new Set(rows.map(r=> r.role));
+  const known = ['leader','trainer','trainee'];
+  const extra = [...present].filter(k=> !known.includes(k)).sort((a,b)=>{
+    const na = parseInt(String(a).replace('trainee',''), 10) || 0;
+    const nb = parseInt(String(b).replace('trainee',''), 10) || 0;
+    return na - nb;
+  });
+  return known.filter(k=> present.has(k)).concat(extra);
+}
+
 async function loadFromSheet(){
   if(!SHEET_WEBHOOK_URL || SHEET_WEBHOOK_URL.includes('여기에')) return;
   try{
@@ -1036,7 +1047,9 @@ async function loadFromSheet(){
     const url = `${SHEET_WEBHOOK_URL}${SHEET_WEBHOOK_URL.includes('?') ? '&' : '?'}plan=${encodeURIComponent(activePlan)}`;
     const res = await fetch(url);
     const json = await res.json();
-    if(json.ok && json.rows && json.rows.length === data.length * roleKeys.length){
+    if(json.ok && Array.isArray(json.rows) && json.rows.length > 0){
+      roleKeys = deriveRoleKeysFromRows(json.rows);
+      ROLE_LABEL = buildRoleLabelMap(roleKeys);
       data = rowsToData(json.rows);
       unsavedKeys.clear();
       render();
