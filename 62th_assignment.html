@@ -429,6 +429,83 @@
     white-space:nowrap;
   }
   .toast.show{ opacity:1; transform:translateX(-50%) translateY(0); }
+
+  .pool-panel{
+    max-width:720px;
+    margin:0 auto 10px;
+    border-radius:var(--radius);
+    box-shadow:var(--shadow);
+    background:var(--panel);
+    padding:12px 14px;
+  }
+  .pool-head{
+    font-size:12.5px;
+    font-weight:700;
+    color:var(--ink);
+    margin-bottom:8px;
+    line-height:1.5;
+  }
+  .pool-form{
+    display:flex;
+    gap:6px;
+    margin-bottom:10px;
+    flex-wrap:wrap;
+  }
+  .pool-form input[type="text"]{
+    flex:1;
+    min-width:100px;
+    font-family:inherit;
+    font-size:13px;
+    padding:8px 10px;
+    border:1px solid var(--line);
+    border-radius:8px;
+    background:#fff;
+    color:var(--ink);
+  }
+  .pool-form select{
+    font-family:inherit;
+    font-size:13px;
+    padding:8px 8px;
+    border:1px solid var(--line);
+    border-radius:8px;
+    background:#fff;
+    color:var(--ink);
+  }
+  .pool-form button{ flex:0 0 auto; }
+  .pool-list{
+    display:flex;
+    flex-wrap:wrap;
+    gap:8px;
+  }
+  .pool-empty{
+    font-size:12px;
+    color:var(--ink-soft);
+    padding:6px 2px;
+  }
+  .card.pool-card{
+    background:#FFF7E8;
+    border-color:#F0DBA8;
+    flex:0 0 auto;
+    min-width:96px;
+    padding-right:22px;
+    position:relative;
+  }
+  .card.pool-card .role{ color:#B8813E; }
+  .pool-del{
+    position:absolute;
+    top:4px;
+    right:4px;
+    width:18px;
+    height:18px;
+    border:none;
+    background:transparent;
+    color:var(--ink-soft);
+    font-size:12px;
+    cursor:pointer;
+    padding:0;
+    line-height:1;
+  }
+  .pool-del:active{ color:#C43C4A; }
 </style>
 </head>
 <body>
@@ -455,6 +532,25 @@
 </div>
 
 <div id="dupPanel" class="dup-panel" style="display:none;"></div>
+
+<div class="pool-panel" id="poolPanel">
+  <div class="pool-head">🆕 미등록 인원 — 등록 후 카드를 조에 끌어다 놓으면 그 자리에 배치되고, 기존 인원은 미등록으로 이동합니다.</div>
+  <div class="pool-form">
+    <input type="text" id="poolNameInput" placeholder="이름">
+    <select id="poolLvlSelect">
+      <option value="1">1단계</option>
+      <option value="2">2단계</option>
+      <option value="3">3단계</option>
+      <option value="4">4단계</option>
+      <option value="5">5단계</option>
+      <option value="H">헬퍼</option>
+    </select>
+    <button class="reset" id="poolAddBtn">등록</button>
+  </div>
+  <div class="pool-list" id="poolList">
+    <div class="pool-empty">등록된 미배치 인원이 없습니다.</div>
+  </div>
+</div>
 
 <div class="history-panel" id="historyPanel">
   <div class="history-head" id="historyHead">
@@ -737,6 +833,60 @@ let currentDropEl = null;
 let unsavedKeys = new Set(); // "jo-role" 형태, 아직 시트에 저장되지 않은 칸
 let selectedJoForGroupMove = null; // 조번호 탭으로 조 전체 이동할 때 첫 번째로 선택한 조
 
+// ---- 미등록 인원 풀 ----
+let unregisteredPeople = []; // [{id, code, lvl, name}, ...]
+let poolIdCounter = 1;
+const poolListEl = document.getElementById('poolList');
+
+function renderPool(){
+  if(unregisteredPeople.length === 0){
+    poolListEl.innerHTML = '<div class="pool-empty">등록된 미배치 인원이 없습니다.</div>';
+    return;
+  }
+  poolListEl.innerHTML = '';
+  unregisteredPeople.forEach(p=>{
+    const el = document.createElement('div');
+    el.className = 'card pool-card';
+    const codeText = p.lvl === 'H' ? (p.code || 'H') : `${p.lvl})`;
+    el.innerHTML = `
+      <div class="role">미배치</div>
+      <div class="nm"><span class="code">${codeText}</span>${p.name}</div>
+      <button type="button" class="pool-del" aria-label="삭제">✕</button>
+    `;
+    el.addEventListener('pointerdown', (e)=>{
+      if(e.target.closest('.pool-del')) return;
+      onPointerDown(e, { type:'pool', id: p.id }, el);
+    });
+    el.querySelector('.pool-del').addEventListener('click', (e)=>{
+      e.stopPropagation();
+      unregisteredPeople = unregisteredPeople.filter(x=> x.id !== p.id);
+      renderPool();
+      showToast(`${p.name}을(를) 미등록 목록에서 삭제했습니다`);
+    });
+    poolListEl.appendChild(el);
+  });
+}
+
+document.getElementById('poolAddBtn').addEventListener('click', ()=>{
+  const nameInput = document.getElementById('poolNameInput');
+  const lvlSelect = document.getElementById('poolLvlSelect');
+  const name = nameInput.value.trim();
+  if(!name){ showToast('이름을 입력하세요'); return; }
+  const lvl = lvlSelect.value;
+  const id = poolIdCounter++;
+  const code = lvl === 'H' ? `H${String(id).padStart(2,'0')}` : '';
+  unregisteredPeople.push({ id, code, lvl, name });
+  nameInput.value = '';
+  nameInput.focus();
+  renderPool();
+  addHistoryLocal(`신규 인원 등록: ${name} (${lvl === 'H' ? '헬퍼' : lvl + '단계'}) — 미배치 대기`);
+  showToast(`${name} 미등록 인원으로 추가되었습니다`);
+});
+
+document.getElementById('poolNameInput').addEventListener('keydown', (e)=>{
+  if(e.key === 'Enter') document.getElementById('poolAddBtn').click();
+});
+
 function onJoTagClick(joNo, tagEl){
   if(selectedJoForGroupMove === null){
     selectedJoForGroupMove = joNo;
@@ -871,16 +1021,16 @@ function makeCard(joNo, roleKey, person, roleLabel, roleClass){
     <div class="nm${unsavedClass}"><span class="code">${codeText}</span>${person.name}</div>
   `;
 
-  el.addEventListener('pointerdown', (e)=> onPointerDown(e, joNo, roleKey, el));
+  el.addEventListener('pointerdown', (e)=> onPointerDown(e, { type:'grid', jo: joNo, role: roleKey }, el));
   return el;
 }
 
-function onPointerDown(e, joNo, roleKey, el){
+function onPointerDown(e, source, el){
   if(drag) return;
 
   const x = e.clientX, y = e.clientY;
 
-  pending = { jo: joNo, role: roleKey, el, x, y };
+  pending = { source, el, x, y };
 
   window.addEventListener('pointermove', onPendingMove);
   window.addEventListener('pointerup', onPendingUp);
@@ -894,7 +1044,7 @@ function onPointerDown(e, joNo, roleKey, el){
 
   pending.activate = setTimeout(()=>{
     if(!pending) return;
-    beginDrag(pending.jo, pending.role, pending.el, pending.x, pending.y);
+    beginDrag(pending.source, pending.el, pending.x, pending.y);
     pending = null;
   }, LONGPRESS_MS);
 }
@@ -922,7 +1072,7 @@ function cancelPending(){
   pending = null;
 }
 
-function beginDrag(joNo, roleKey, el, x, y){
+function beginDrag(source, el, x, y){
   window.removeEventListener('pointermove', onPendingMove);
   window.removeEventListener('pointerup', onPendingUp);
   window.removeEventListener('pointercancel', onPendingCancel);
@@ -938,7 +1088,7 @@ function beginDrag(joNo, roleKey, el, x, y){
 
   el.classList.add('dragging');
 
-  drag = { jo: joNo, role: roleKey, el, ghost };
+  drag = { source, el, ghost };
 
   hintbar.textContent = '카드를 놓을 위치 위로 이동하세요.';
 
@@ -957,7 +1107,7 @@ function onDragMove(e){
   const under = document.elementFromPoint(e.clientX, e.clientY);
   drag.ghost.style.display = '';
 
-  const targetCard = under ? under.closest('.card') : null;
+  const targetCard = under ? under.closest('.card[data-jo]') : null;
 
   if(currentDropEl && currentDropEl !== targetCard){
     currentDropEl.classList.remove('drop-target');
@@ -987,14 +1137,26 @@ function onDragEnd(){
   }
   currentDropEl = null;
 
-  const sourceJo = drag.jo, sourceRole = drag.role;
+  const source = drag.source;
   drag = null;
 
-  if(dropJo === null || (dropJo === sourceJo && dropRole === sourceRole)){
+  if(dropJo === null){
     hintbar.textContent = '카드를 눌러서 끌어보세요.';
     return;
   }
 
+  if(source.type === 'grid'){
+    if(dropJo === source.jo && dropRole === source.role){
+      hintbar.textContent = '카드를 눌러서 끌어보세요.';
+      return;
+    }
+    handleGridSwap(source.jo, source.role, dropJo, dropRole);
+  } else if(source.type === 'pool'){
+    handlePoolDrop(source.id, dropJo, dropRole);
+  }
+}
+
+function handleGridSwap(sourceJo, sourceRole, dropJo, dropRole){
   const a = findSlot(sourceJo, sourceRole);
   const b = findSlot(dropJo, dropRole);
   setSlot(sourceJo, sourceRole, b);
@@ -1014,6 +1176,38 @@ function onDragEnd(){
   saveToSheet(historyText).then(ok=>{
     if(ok){
       unsavedKeys.delete(`${sourceJo}-${sourceRole}`);
+      unsavedKeys.delete(`${dropJo}-${dropRole}`);
+      render();
+    }
+  });
+}
+
+function handlePoolDrop(poolId, dropJo, dropRole){
+  const person = unregisteredPeople.find(p=> p.id === poolId);
+  if(!person){
+    hintbar.textContent = '카드를 눌러서 끌어보세요.';
+    return;
+  }
+
+  const displaced = findSlot(dropJo, dropRole);
+  setSlot(dropJo, dropRole, { code: person.code, lvl: person.lvl, name: person.name });
+
+  unregisteredPeople = unregisteredPeople.filter(p=> p.id !== poolId);
+  unregisteredPeople.push({ id: poolIdCounter++, code: displaced.code, lvl: displaced.lvl, name: displaced.name });
+  renderPool();
+
+  unsavedKeys.add(`${dropJo}-${dropRole}`);
+
+  showToast(`${person.name} → ${dropJo}조 ${ROLE_LABEL[dropRole]} 배치 (${displaced.name}은 미등록으로 이동)`);
+  render(dropJo, dropRole);
+  hintbar.textContent = '카드를 눌러서 끌어보세요.';
+  document.getElementById('dupPanel').style.display = 'none';
+
+  const historyText = `${dropJo}조 ${ROLE_LABEL[dropRole]}: ${displaced.name} → ${person.name} 신규 배치 (${displaced.name}은 미등록으로 이동)`;
+  addHistoryLocal(historyText);
+
+  saveToSheet(historyText).then(ok=>{
+    if(ok){
       unsavedKeys.delete(`${dropJo}-${dropRole}`);
       render();
     }
@@ -1074,6 +1268,7 @@ document.querySelectorAll('.tab').forEach(btn=>{
 });
 
 render();
+renderPool();
 loadFromSheet();
 </script>
 </body>
