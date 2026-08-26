@@ -571,6 +571,16 @@
     background:var(--groupA);
     border-color:var(--groupA);
   }
+  .subtab.copy-plan{
+    flex:0 0 auto;
+    color:#B8813E;
+    background:#FFF3E2;
+    border-color:#F0DBA8;
+    font-weight:700;
+    white-space:nowrap;
+    padding:6px 10px;
+  }
+  .subtab.copy-plan:active{ background:#F0DBA8; }
 
   .settings-btn{
     position:fixed;
@@ -818,6 +828,7 @@
     <div class="subtabbar" id="subtabbar">
       <button class="subtab active" data-plan="1">1안</button>
       <button class="subtab" data-plan="2">2안</button>
+      <button class="subtab copy-plan" id="copyPlanBtn" title="1안 전체를 2안으로 복사해서 저장">1안→2안 복사</button>
     </div>
     <div class="gridhead" id="gridHead"></div>
     <div id="rows"></div>
@@ -1023,15 +1034,23 @@ function runDuplicateCheck(){
 // 배포한 Apps Script 웹 앱 URL을 여기에 붙여넣으세요.
 const SHEET_WEBHOOK_URL = "https://script.google.com/macros/s/AKfycbwypAhwkNZFkEArhpCpv8cmrt3QbhLfSsevviZw38h8gdHrx3kY062pph6VeKZf1SAYFg/exec";
 
-function dataToRows(d){
+function dataToRows(d, rKeys){
+  d = d || data;
+  rKeys = rKeys || roleKeys;
   const rows = [];
   d.forEach(j=>{
-    roleKeys.forEach(key=>{
+    rKeys.forEach(key=>{
       const p = j[key] || emptySlot();
       rows.push({ jo: j.no, group: j.group, role: key, code: p.code, lvl: p.lvl, name: p.name });
     });
   });
   return rows;
+}
+
+// 미등록 인원(대기 풀)도 시트에 함께 저장하기 위해 role:"pool" 행으로 변환한다.
+// jo는 비워두고(그룹 배치 대상 아님), role만으로 구분한다.
+function poolToRows(pool){
+  return (pool || []).map(p=> ({ jo:'', group:'', role:'pool', code:p.code, lvl:p.lvl, name:p.name }));
 }
 
 function rowsToData(rows){
@@ -1064,11 +1083,17 @@ async function loadFromSheet(){
     const res = await fetch(url, { cache: 'no-store' });
     const json = await res.json();
     if(json.ok && Array.isArray(json.rows) && json.rows.length > 0){
-      roleKeys = deriveRoleKeysFromRows(json.rows);
+      const gridRows = json.rows.filter(r=> r.role !== 'pool');
+      const poolRows = json.rows.filter(r=> r.role === 'pool');
+      roleKeys = deriveRoleKeysFromRows(gridRows);
       ROLE_LABEL = buildRoleLabelMap(roleKeys);
-      data = rowsToData(json.rows);
+      data = rowsToData(gridRows);
+      unregisteredPeople = poolRows
+        .filter(r=> r.name)
+        .map(r=> ({ id: poolIdCounter++, code: r.code, lvl: String(r.lvl), name: r.name }));
       unsavedKeys.clear();
       render();
+      renderPool();
       showToast('구글시트에서 불러왔습니다');
     }
     if(json.ok && Array.isArray(json.history)){
@@ -1083,16 +1108,21 @@ async function loadFromSheet(){
 }
 
 // historyText를 함께 보내면 변경이력 시트에도 한 줄 자동 기록된다.
-async function saveToSheet(historyText){
+// planOverride/dataOverride/roleKeysOverride/poolOverride를 넘기면 현재 보고 있는 안이 아닌
+// 다른 안(예: 2안)에 저장할 수 있다 (1안→2안 복사 기능에서 사용).
+async function saveToSheet(historyText, planOverride, dataOverride, roleKeysOverride, poolOverride){
   if(!SHEET_WEBHOOK_URL || SHEET_WEBHOOK_URL.includes('여기에')) return false;
+  const plan = planOverride || activePlan;
+  const rows = dataToRows(dataOverride || data, roleKeysOverride || roleKeys)
+    .concat(poolToRows(poolOverride !== undefined ? poolOverride : unregisteredPeople));
   try{
     const res = await fetch(SHEET_WEBHOOK_URL, {
       method: 'POST',
       headers: { 'Content-Type': 'text/plain' }, // preflight(OPTIONS) 회피용
-      body: JSON.stringify({ plan: activePlan, rows: dataToRows(data), historyText: historyText || undefined }),
+      body: JSON.stringify({ plan, rows, historyText: historyText || undefined }),
     });
     const json = await res.json().catch(()=>null);
-    if(json && json.ok && Array.isArray(json.history)){
+    if(json && json.ok && Array.isArray(json.history) && plan === activePlan){
       historyLog = json.history; // 서버 기록으로 동기화(시간 포함)
       renderHistory();
     }
@@ -1701,6 +1731,53 @@ document.getElementById('dupBtn').addEventListener('click', runDuplicateCheck);
 
 document.getElementById('loadBtn').addEventListener('click', ()=>{
   loadFromSheet();
+});
+
+// ---- 1안 전체를 2안으로 복사해서 저장 ----
+document.getElementById('copyPlanBtn').addEventListener('click', async ()=>{
+  // 현재 화면이 1안이면 지금 작업 상태를, 아니면 저장된 1안 스냅샷(없으면 기본값)을 소스로 쓴다.
+  let sourceData, sourceRoleKeys, sourcePool;
+  if(activePlan === '1'){
+    sourceData = data;
+    sourceRoleKeys = roleKeys;
+    sourcePool = unregisteredPeople;
+  } else if(plans['1']){
+    sourceData = plans['1'].data;
+    sourceRoleKeys = plans['1'].roleKeys;
+    sourcePool = plans['1'].unregisteredPeople;
+  } else {
+    sourceData = JSON.parse(JSON.stringify(initialData));
+    sourceRoleKeys = ['leader','trainer','trainee'];
+    sourcePool = [];
+  }
+
+  const copiedData = JSON.parse(JSON.stringify(sourceData));
+  const copiedPool = JSON.parse(JSON.stringify(sourcePool));
+
+  showToast('2안으로 복사해서 저장 중...');
+  const ok = await saveToSheet('1안 전체를 2안으로 복사', '2', copiedData, sourceRoleKeys, copiedPool);
+  if(!ok) return;
+
+  // 2안 스냅샷 갱신(2안 탭으로 전환할 때 곧바로 반영되도록)
+  plans['2'] = {
+    data: copiedData,
+    unsavedKeys: new Set(),
+    historyLog: plans['2'] ? plans['2'].historyLog : [],
+    unregisteredPeople: copiedPool,
+    selectedJoForGroupMove: null,
+    pendingHistoryTexts: [],
+    roleKeys: sourceRoleKeys,
+    roleLabel: buildRoleLabelMap(sourceRoleKeys),
+  };
+
+  if(activePlan === '2'){
+    loadWorkingState(plans['2']);
+    render();
+    renderPool();
+    renderHistory();
+  }
+
+  showToast('1안을 2안으로 복사해서 저장했습니다');
 });
 
 document.getElementById('xlsxBtn').addEventListener('click', ()=>{
