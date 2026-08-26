@@ -124,6 +124,7 @@
   .icon-btn.save{ color:var(--teal); }
   .icon-btn.dup{ color:var(--rose); }
   .icon-btn.undo{ color:var(--ink-soft); }
+  .icon-btn.load{ color:var(--groupA); }
 
   .nm.unsaved{
     color:#1D4ED8;
@@ -755,6 +756,12 @@
       <path d="M9 9V21" stroke="currentColor" stroke-width="1.8"/>
       <path d="M15 9V21" stroke="currentColor" stroke-width="1.8"/>
       <path d="M3 15H21" stroke="currentColor" stroke-width="1.8"/>
+    </svg>
+  </button>
+  <button class="icon-btn load" id="loadBtn" title="구글시트에서 불러오기" aria-label="구글시트에서 불러오기">
+    <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <path d="M20 12C20 16.4183 16.4183 20 12 20C7.58172 20 4 16.4183 4 12C4 7.58172 7.58172 4 12 4C14.5264 4 16.7793 5.1743 18.2454 7" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
+      <path d="M14.5 3.5L18.5 7L14.5 10" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
     </svg>
   </button>
   <button class="icon-btn undo" id="resetBtn" title="처음 배치로 되돌리기" aria-label="처음 배치로 되돌리기">
@@ -1688,6 +1695,10 @@ document.getElementById('saveBtn').addEventListener('click', async ()=>{
 });
 
 document.getElementById('dupBtn').addEventListener('click', runDuplicateCheck);
+
+document.getElementById('loadBtn').addEventListener('click', ()=>{
+  loadFromSheet();
+});
 
 document.getElementById('xlsxBtn').addEventListener('click', ()=>{
   const header = ['조','그룹', ...roleKeys.map(k=> ROLE_LABEL[k])];
