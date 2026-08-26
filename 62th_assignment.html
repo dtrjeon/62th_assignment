@@ -702,7 +702,7 @@
 </head>
 <body>
 
-<div class="app-version" id="appVersion">v1.7</div>
+<div class="app-version" id="appVersion">v1.8</div>
 <button class="icon-btn settings-btn" id="settingsBtn" title="설정" aria-label="설정">
   <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
     <circle cx="12" cy="12" r="3.2" stroke="currentColor" stroke-width="1.8"/>
@@ -872,7 +872,7 @@
 
 <script>
 // ---- 앱 버전(이 숫자만 바꾸면 우측 상단 표시도 함께 바뀐다) ----
-const APP_VERSION = "v1.7";
+const APP_VERSION = "v1.8";
 (function(){
   const el = document.getElementById('appVersion');
   if(el){
@@ -1124,8 +1124,8 @@ async function loadFromSheet(){
     }
     // 전화번호(명단)와 그룹장/부그룹장 정보 — 엑셀 저장 시 사용. plan과 무관하게 항상 최신으로 갱신.
     if(Array.isArray(json.roster)){
-      rosterByCode = {};
-      json.roster.forEach(p=>{ if(p.code) rosterByCode[String(p.code)] = { name: p.name, phone: p.phone }; });
+      rosterByName = {};
+      json.roster.forEach(p=>{ if(p.name) rosterByName[String(p.name).trim()] = { phone: p.phone }; });
     }
     if(Array.isArray(json.groupLeaders)){
       groupLeaderByGroup = {};
@@ -1244,7 +1244,7 @@ document.querySelectorAll('.subtab').forEach(btn=>{
 let unregisteredPeople = []; // [{id, code, lvl, name}, ...]
 // 전화번호 명단(코드→{name,phone})과 그룹장/부그룹장 정보(그룹→{leader,leaderPhone,viceLeader,viceLeaderPhone}).
 // 둘 다 구글시트에서 직접 입력·관리하고, 앱은 불러오기만 한다. 엑셀 저장(양식 출력)에 사용.
-let rosterByCode = {};
+let rosterByName = {};
 let groupLeaderByGroup = {};
 let poolIdCounter = 1;
 const poolListEl = document.getElementById('poolList');
@@ -1825,7 +1825,7 @@ document.getElementById('xlsxBtn').addEventListener('click', ()=>{
     if(!p || !p.name) return '공석';
     return p.lvl === 'H' ? p.name : `${p.lvl})${p.name}`;
   };
-  const phoneText = p => (p && p.code && rosterByCode[String(p.code)]) ? (rosterByCode[String(p.code)].phone || '') : '';
+  const phoneText = p => (p && p.name && rosterByName[String(p.name).trim()]) ? (rosterByName[String(p.name).trim()].phone || '') : '';
 
   // 조 데이터를 그룹(A/B/C/D...) 순서대로 묶는다. (그룹 등장 순서를 그대로 유지)
   const groupOrder = [];
