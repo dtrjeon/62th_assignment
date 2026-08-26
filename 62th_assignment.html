@@ -17,7 +17,7 @@
 
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+KR:wght@600;700&family=Noto+Sans+KR:wght@400;500;600;700&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
-<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/exceljs@4.4.0/dist/exceljs.min.js"></script>
 <style>
   :root{
     --paper:#EEF1F6;
@@ -702,7 +702,7 @@
 </head>
 <body>
 
-<div class="app-version" id="appVersion">v1.8</div>
+<div class="app-version" id="appVersion">v2.0</div>
 <button class="icon-btn settings-btn" id="settingsBtn" title="설정" aria-label="설정">
   <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
     <circle cx="12" cy="12" r="3.2" stroke="currentColor" stroke-width="1.8"/>
@@ -872,7 +872,7 @@
 
 <script>
 // ---- 앱 버전(이 숫자만 바꾸면 우측 상단 표시도 함께 바뀐다) ----
-const APP_VERSION = "v1.8";
+const APP_VERSION = "v2.0";
 (function(){
   const el = document.getElementById('appVersion');
   if(el){
@@ -1819,11 +1819,11 @@ document.getElementById('copyPlanBtn').addEventListener('click', async ()=>{
   showToast('1안을 2안으로 복사해서 저장했습니다');
 });
 
-document.getElementById('xlsxBtn').addEventListener('click', ()=>{
+document.getElementById('xlsxBtn').addEventListener('click', async ()=>{
   // 이름 옆에 단계 표시 (예: "5)성기현B", 헬퍼는 코드 그대로)
   const labelText = p => {
     if(!p || !p.name) return '공석';
-    return p.lvl === 'H' ? p.name : `${p.lvl})${p.name}`;
+    return p.lvl === 'H' ? p.name : `${p.name}(${p.lvl})`;
   };
   const phoneText = p => (p && p.name && rosterByName[String(p.name).trim()]) ? (rosterByName[String(p.name).trim()].phone || '') : '';
 
@@ -1833,7 +1833,7 @@ document.getElementById('xlsxBtn').addEventListener('click', ()=>{
 
   // 61기 양식 헤더: 조 | (1번째 역할) | 전화번호 | (2번째 역할) | 전화번호 | ... 각 역할마다 이름+전화번호 한 쌍
   const roleColHeaders = roleKeys.map((k, i)=>{
-    if(i === 0) return 'N차 훈련자';
+    if(i === 0) return '훈련자(조장)';
     if(i === roleKeys.length - 1) return ROLE_LABEL[k] || '훈련생';
     return '2/3차 훈련자';
   });
@@ -1841,13 +1841,36 @@ document.getElementById('xlsxBtn').addEventListener('click', ()=>{
   roleColHeaders.forEach(h=> colHeaderRow.push(h, '전화번호'));
   const totalCols = colHeaderRow.length;
 
-  const sheetData = [];
-  const merges = [];
+  // ---- ExcelJS로 워크북 생성 (색상/테두리/병합/A4 인쇄 설정 모두 지원) ----
+  const wb = new ExcelJS.Workbook();
+  const ws = wb.addWorksheet(`62기 ${activePlan}안`, {
+    pageSetup: { paperSize: 9, orientation: 'portrait', fitToPage: true, fitToWidth: 1, fitToHeight: 0,
+      margins: { left:0.5, right:0.5, top:0.6, bottom:0.6, header:0.3, footer:0.3 } },
+  });
 
-  // 제목 (전체 병합)
-  sheetData.push([`제62기 전도폭발훈련 조 편성`]);
-  merges.push({ s:{r:0,c:0}, e:{r:0,c: totalCols-1} });
-  sheetData.push([]); // 여백 한 줄
+  ws.columns = [{ width: 6 }, ...roleKeys.flatMap(()=> [{ width: 14 }, { width: 15 }])];
+
+  const THIN = { style: 'thin', color: { argb: 'FF000000' } };
+  const BORDER_ALL = { top: THIN, left: THIN, bottom: THIN, right: THIN };
+  const FILL_GROUP_HEADER = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFD9E6F5' } }; // 옅은 파란색
+  const FILL_COL_HEADER = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFE8E8E8' } };   // 옅은 회색
+
+  function styleRow(row, { bold, fill, border, align, size } = {}){
+    row.eachCell({ includeEmpty: true }, cell=>{
+      if(bold !== undefined) cell.font = { bold, size: size || 11 };
+      if(fill) cell.fill = fill;
+      if(border) cell.border = BORDER_ALL;
+      cell.alignment = { vertical:'middle', horizontal: align || 'center', wrapText: true };
+    });
+  }
+
+  // 제목 (전체 병합, 굵고 크게)
+  const titleRow = ws.addRow([`제62기 전도폭발훈련 조 편성`]);
+  ws.mergeCells(titleRow.number, 1, titleRow.number, totalCols);
+  styleRow(titleRow, { bold:true, size:18 });
+  titleRow.height = 26;
+
+  ws.addRow([]); // 여백 한 줄
 
   groupOrder.forEach(g=>{
     const gl = groupLeaderByGroup[g] || {};
@@ -1856,33 +1879,37 @@ document.getElementById('xlsxBtn').addEventListener('click', ()=>{
     const viceName = gl.viceLeader || '';
     const headerText = `${g} 그룹장: ${leaderName}${leaderPhone ? `(${leaderPhone})` : ''}${viceName ? `, ${viceName}` : ''}`;
 
-    const groupHeaderRowIdx = sheetData.length;
-    sheetData.push([headerText]);
-    merges.push({ s:{r:groupHeaderRowIdx,c:0}, e:{r:groupHeaderRowIdx,c: totalCols-1} });
+    const groupHeaderRow = ws.addRow([headerText]);
+    ws.mergeCells(groupHeaderRow.number, 1, groupHeaderRow.number, totalCols);
+    styleRow(groupHeaderRow, { bold:true, fill: FILL_GROUP_HEADER, border:true, align:'left' });
 
-    sheetData.push(colHeaderRow);
+    const colHeaderExcelRow = ws.addRow(colHeaderRow);
+    styleRow(colHeaderExcelRow, { bold:true, fill: FILL_COL_HEADER, border:true });
 
     data.filter(j=> j.group === g).forEach(j=>{
-      const row = [`${j.no}`];
+      const rowValues = [`${j.no}`];
       roleKeys.forEach(k=>{
-        row.push(labelText(j[k]), phoneText(j[k]));
+        rowValues.push(labelText(j[k]), phoneText(j[k]));
       });
-      sheetData.push(row);
+      const dataRow = ws.addRow(rowValues);
+      styleRow(dataRow, { bold:false, border:true });
     });
   });
 
-  const ws = XLSX.utils.aoa_to_sheet(sheetData);
-  ws['!merges'] = merges;
-  ws['!cols'] = [{wch:5}, ...roleKeys.flatMap(()=> [{wch:14},{wch:15}])];
-  // A4 세로(portrait) 인쇄 설정
-  ws['!pageSetup'] = { paperSize: 9, orientation: 'portrait', fitToWidth: 1, fitToHeight: 0 };
-  ws['!margins'] = { left:0.5, right:0.5, top:0.6, bottom:0.6, header:0.3, footer:0.3 };
+  const buffer = await wb.xlsx.writeBuffer();
+  const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `62기_${activePlan}안_조편성.xlsx`;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
 
-  const wb = XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(wb, ws, `62기 ${activePlan}안`);
-  XLSX.writeFile(wb, `62기_${activePlan}안_조편성.xlsx`);
   showToast('엑셀 파일로 저장했습니다');
 });
+
 
 document.querySelectorAll('.tab').forEach(btn=>{
   btn.addEventListener('click', ()=>{
