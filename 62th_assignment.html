@@ -1049,8 +1049,9 @@ async function loadFromSheet(){
   if(!SHEET_WEBHOOK_URL || SHEET_WEBHOOK_URL.includes('여기에')) return;
   try{
     hintbar.textContent = '구글시트에서 불러오는 중...';
-    const url = `${SHEET_WEBHOOK_URL}${SHEET_WEBHOOK_URL.includes('?') ? '&' : '?'}plan=${encodeURIComponent(activePlan)}`;
-    const res = await fetch(url);
+    // 캐시버스터(_ts)로 서비스워커/브라우저 캐시가 오래된 응답을 재사용하지 못하게 막는다.
+    const url = `${SHEET_WEBHOOK_URL}${SHEET_WEBHOOK_URL.includes('?') ? '&' : '?'}plan=${encodeURIComponent(activePlan)}&_ts=${Date.now()}`;
+    const res = await fetch(url, { cache: 'no-store' });
     const json = await res.json();
     if(json.ok && Array.isArray(json.rows) && json.rows.length > 0){
       roleKeys = deriveRoleKeysFromRows(json.rows);
