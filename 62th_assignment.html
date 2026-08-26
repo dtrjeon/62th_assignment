@@ -702,7 +702,7 @@
 </head>
 <body>
 
-<div class="app-version" id="appVersion">v1.4</div>
+<div class="app-version" id="appVersion">v1.5</div>
 <button class="icon-btn settings-btn" id="settingsBtn" title="설정" aria-label="설정">
   <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
     <circle cx="12" cy="12" r="3.2" stroke="currentColor" stroke-width="1.8"/>
@@ -718,11 +718,11 @@
       <div class="modal-label">1. 조편성 구조 (행 × 열)</div>
       <div class="modal-row">
         <label for="structRowsInput">행 (조 개수)</label>
-        <input type="number" id="structRowsInput" min="1" max="50" value="11">
+        <input type="number" id="structRowsInput" min="1" max="50" value="10">
       </div>
       <div class="modal-row">
         <label for="structColsInput">열 (역할 슬롯 개수)</label>
-        <input type="number" id="structColsInput" min="1" max="8" value="4">
+        <input type="number" id="structColsInput" min="1" max="8" value="3">
       </div>
     </div>
 
@@ -734,7 +734,7 @@
       </div>
       <div class="modal-row">
         <label for="groupBInput"><i class="dot" style="background:var(--groupB)"></i> B</label>
-        <input type="number" id="groupBInput" min="0" max="50" value="3"> <span class="unit">조</span>
+        <input type="number" id="groupBInput" min="0" max="50" value="2"> <span class="unit">조</span>
       </div>
       <div class="modal-row">
         <label for="groupCInput"><i class="dot" style="background:var(--groupC)"></i> C</label>
@@ -872,7 +872,7 @@
 
 <script>
 // ---- 앱 버전(이 숫자만 바꾸면 우측 상단 표시도 함께 바뀐다) ----
-const APP_VERSION = "v1.4";
+const APP_VERSION = "v1.5";
 (function(){
   const el = document.getElementById('appVersion');
   if(el){
@@ -1845,6 +1845,8 @@ function countGroups(){
 
 function openSettings(){
   const counts = countGroups();
+  document.getElementById('structRowsInput').value = data.length;
+  document.getElementById('structColsInput').value = roleKeys.length;
   document.getElementById('groupAInput').value = counts.A;
   document.getElementById('groupBInput').value = counts.B;
   document.getElementById('groupCInput').value = counts.C;
