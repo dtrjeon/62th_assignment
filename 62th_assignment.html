@@ -584,10 +584,24 @@
 
   .settings-btn{
     position:fixed;
-    top:14px;
+    top:26px;
     right:14px;
     z-index:50;
     color:var(--ink-soft);
+  }
+
+  .app-version{
+    position:fixed;
+    top:6px;
+    right:14px;
+    z-index:50;
+    font-family:'JetBrains Mono', monospace;
+    font-size:9.5px;
+    font-weight:700;
+    color:var(--ink-soft);
+    opacity:0.7;
+    letter-spacing:0.02em;
+    pointer-events:none;
   }
 
   .modal-overlay{
@@ -688,6 +702,7 @@
 </head>
 <body>
 
+<div class="app-version" id="appVersion">v1.4</div>
 <button class="icon-btn settings-btn" id="settingsBtn" title="설정" aria-label="설정">
   <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
     <circle cx="12" cy="12" r="3.2" stroke="currentColor" stroke-width="1.8"/>
@@ -856,6 +871,16 @@
 <div class="toast" id="toast"></div>
 
 <script>
+// ---- 앱 버전(이 숫자만 바꾸면 우측 상단 표시도 함께 바뀐다) ----
+const APP_VERSION = "v1.4";
+(function(){
+  const el = document.getElementById('appVersion');
+  if(el){
+    el.textContent = APP_VERSION;
+    el.title = `62기 조편성 ${APP_VERSION}`;
+  }
+})();
+
 // ---- 데이터: 조 / 그룹 / 역할 (10행 고정) ----
 const initialData = [
   { no:1,  group:"A", leader:{code:"", lvl:"", name:""}, trainer:{code:"", lvl:"", name:""}, trainee:{code:"", lvl:"", name:""} },
