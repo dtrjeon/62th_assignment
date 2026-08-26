@@ -70,9 +70,9 @@
     margin:0 auto 10px;
     padding:0 16px;
     display:flex;
-    gap:8px;
+    gap:6px;
     align-items:center;
-    flex-wrap:wrap;
+    flex-wrap:nowrap;
     position:sticky;
     top:0;
     z-index:20;
@@ -81,14 +81,17 @@
     background:var(--paper);
   }
   .hint{
-    flex:1;
-    min-width:150px;
-    font-size:12px;
+    flex:1 1 0;
+    min-width:0;
+    font-size:11px;
     color:var(--ink-soft);
     background:var(--panel);
     border:1px solid var(--line);
     border-radius:10px;
-    padding:8px 12px;
+    padding:8px 8px;
+    white-space:nowrap;
+    overflow:hidden;
+    text-overflow:ellipsis;
   }
   .hint b{color:var(--ink);}
   button.reset{
