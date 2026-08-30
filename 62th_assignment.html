@@ -1835,7 +1835,7 @@ document.getElementById('xlsxBtn').addEventListener('click', async ()=>{
   const roleColHeaders = roleKeys.map((k, i)=>{
     if(i === 0) return '훈련자(조장)';
     if(i === roleKeys.length - 1) return ROLE_LABEL[k] || '훈련생';
-    return '2/3차 훈련자';
+    return '훈련자';
   });
   const colHeaderRow = ['조'];
   roleColHeaders.forEach(h=> colHeaderRow.push(h, '전화번호'));
@@ -1848,7 +1848,7 @@ document.getElementById('xlsxBtn').addEventListener('click', async ()=>{
       margins: { left:0.5, right:0.5, top:0.6, bottom:0.6, header:0.3, footer:0.3 } },
   });
 
-  ws.columns = [{ width: 6 }, ...roleKeys.flatMap(()=> [{ width: 14 }, { width: 15 }])];
+  ws.columns = [{ width: 6 }, ...roleKeys.flatMap(()=> [{ width: 14 }, { width: 20 }])];
 
   const THIN = { style: 'thin', color: { argb: 'FF000000' } };
   const BORDER_ALL = { top: THIN, left: THIN, bottom: THIN, right: THIN };
